@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader';
-import SkyPath from '../../assets/sky.exr'
 import { marchingCubesFromGrid } from './marchingCubeGenerator';
 import FastNoiseLite from 'fastnoise-lite';
 import { Chunk } from './chunk';
@@ -69,15 +68,7 @@ export class Game {
     
   }
   loadSky() {
-    new EXRLoader()
-      .load(SkyPath, (texture) => {
-        texture.mapping = THREE.EquirectangularReflectionMapping;
 
-        this.scene.background = texture;
-        this.scene.environment = texture;
-
-        //animate();
-      });
 
   }
   loadDebugObjects() {
