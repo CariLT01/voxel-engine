@@ -21,8 +21,12 @@ module.exports = {
         exclude: /node_modules/,
       },
       {
-        test: /\.(exr|txt)$/,
+        test: /\.(exr|txt|png)$/,
         type: 'asset/resource'  // emits files, returns URL string
+      },
+      {
+        test: /\.(glsl|vert|frag)$/,
+        type: 'asset/source',
       }
     ],
   },

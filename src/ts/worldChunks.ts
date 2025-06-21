@@ -1,8 +1,9 @@
-import { BoxHelper, Material, Mesh, Scene, Vector3 } from "three";
+import { BoxHelper, Material, Mesh, Scene, ShaderMaterial, Vector3 } from "three";
 import { Chunk } from "./chunk";
 import FastNoiseLite from 'fastnoise-lite';
 import { ChunkBuilder } from "./chunkBuilder";
 import { Player } from "./player";
+import { createShaderMaterial } from "./shaderMaterialLoader";
 
 const RENDER_DISTANCE = 6;
 const CHUNK_SIZE = 32;
@@ -24,11 +25,24 @@ noise.SetFrequency(.05);
 type BlockData = {
     blockType: number
 }
+type ShaderLoaderResult = {
+        atlas: {
+            width: number;
+            height: number;
+            atlasData: {
+                beginX: number;
+                beginY: number;
+                endX: number;
+                endY: number;
+            }[];
+        };
+        mat: ShaderMaterial;
+    };
 
 export class ChunkManager {
 
-    private chunks: {[key: number]: Chunk} = {};
-    private hashToPos: {[key: number]: Vector3} = {};
+    private chunks: { [key: number]: Chunk } = {};
+    private hashToPos: { [key: number]: Vector3 } = {};
     private pendingChunks: Record<number, boolean> = {};
     private loadedChunks: Record<number, boolean> = {};
 
@@ -36,9 +50,12 @@ export class ChunkManager {
 
     private player: Player;
     private loadOffsets = this.precomputeLoadList();
+    private shaderResult!: ShaderLoaderResult;
+
 
     constructor(player: Player) {
         this.player = player;
+        this.asyncInit();
     }
 
     private precomputeLoadList() {
@@ -64,6 +81,11 @@ export class ChunkManager {
         );
 
         return loadList;
+    }
+
+    private async asyncInit() {
+        const result = await createShaderMaterial();
+        this.shaderResult = result;
     }
 
     private createLoadList(playerPosition: Vector3, skipLoaded: boolean = true) {
@@ -102,10 +124,10 @@ export class ChunkManager {
                 for (let z = 0; z < CHUNK_SIZE; z++) {
                     const index = x + y * 32 + z * 32 * 32;
 
-                    const v = noise.GetNoise((x + chunkPosition.x * CHUNK_SIZE) * FREQ, 0, (z + chunkPosition.z * CHUNK_SIZE) * FREQ);
-                    const y_ = y + chunkPosition.y * CHUNK_SIZE;
-                    const h = Math.pow(v, 4) * 200;
-                    if (y_ < h) {
+                    const v = noise.GetNoise((x + chunkPosition.x * CHUNK_SIZE) * FREQ, (y + chunkPosition.y * CHUNK_SIZE) * FREQ, (z + chunkPosition.z * CHUNK_SIZE) * FREQ);
+                    //const y_ = y + chunkPosition.y * CHUNK_SIZE;
+                    //const h = Math.pow(v, 4) * 200;
+                    if (v < 0) {
                         ChunkData[index] = 1;
                         numNonAir++;
                     } else {
@@ -187,6 +209,7 @@ export class ChunkManager {
 
 
     update(currentPosition: Vector3, scene: Scene) {
+        if (!this.shaderResult) return;
         //console.log("Update");
         const loadArray = this.createLoadList(currentPosition);
 
@@ -198,10 +221,10 @@ export class ChunkManager {
 
         if (!this.chunks[first[0]]) {
             const generated = this.generateChunk(first[1]);
-            const chunk = new Chunk(generated, first[1], this.chunkBuilder);
+            const chunk = new Chunk(generated, first[1], this.chunkBuilder, this.shaderResult);
             this.chunks[hashVec3Int(first[1])] = chunk;
 
-            this.hashToPos[first[0]] =  first[1];
+            this.hashToPos[first[0]] = first[1];
             console.log("Generated: ", first[1]);
 
 

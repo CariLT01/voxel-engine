@@ -26,8 +26,9 @@ export class Game {
   constructor() {
 
     const canvas = document.querySelector("#main") as HTMLCanvasElement;
+    const context = canvas.getContext('webgl2') as unknown as WebGLRenderingContext; // Shut up Typescript;
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, context: context});
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
     canvas.addEventListener('click', () => {
