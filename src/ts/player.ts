@@ -50,16 +50,22 @@ export class Player extends Entity {
         const forwardVelocity = (this.keysPressed.has('w') ? 1 : 0) + (this.keysPressed.has('s') ? -1 : 0);
         const strafeVelocity = (this.keysPressed.has('a') ? 1 : 0) + (this.keysPressed.has('d') ? -1 : 0);
 
+        let SPEED = 10;
+
+        if (this.isStandingInFluid() == true) {
+            SPEED = 4;
+        }
+
         const qx = new Quaternion();
         qx.setFromAxisAngle(new Vector3(0, 1, 0), this.phi);
 
         const forward = new Vector3(0, 0, -1);
         forward.applyQuaternion(qx);
-        forward.multiplyScalar(forwardVelocity * 10);
+        forward.multiplyScalar(forwardVelocity * SPEED);
 
         const left = new Vector3(-1, 0, 0);
         left.applyQuaternion(qx);
-        left.multiplyScalar(strafeVelocity * 10);
+        left.multiplyScalar(strafeVelocity * SPEED);
 
         this.accel.add(left);
         this.accel.add(forward);

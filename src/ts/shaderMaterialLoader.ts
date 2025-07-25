@@ -1,12 +1,15 @@
 import ChunkVertexShader from '../shaders/chunkVertex.glsl';
 import ChunkFragmentShader from '../shaders/chunkFragment.glsl'
-import { CanvasTexture, NearestFilter, ShaderMaterial, Texture, TextureLoader } from 'three';
+import { CanvasTexture, ClampToEdgeWrapping, GLSL3, NearestFilter, NearestMipMapNearestFilter, ShaderMaterial, Texture, TextureLoader } from 'three';
 import debugTexturePath from '../../assets/blue.png'
 import debugTexturePath2 from '../../assets/red.png'
 import grassSideTexturePath from '../../assets/grass_side.png'
 import grassTopTexturePath from '../../assets/grass_top.png'
 import grassBottomTexturePath from '../../assets/grass_bottom.png'
-
+import stoneTexturePath from '../../assets/stone.png'
+import sandTexturePath from '../../assets/sand.png'
+import waterTexturePath from '../../assets/water.png'
+import snowTexturePath from '../../assets/snow.png'
 
 async function loadImage(src: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
@@ -22,7 +25,11 @@ const textures = [
     grassTopTexturePath,
     grassBottomTexturePath,
     debugTexturePath,
-    debugTexturePath2
+    debugTexturePath2,
+    stoneTexturePath,
+    sandTexturePath,
+    waterTexturePath,
+    snowTexturePath
 ];
 
 async function buildAtlas(textures: string[]) {
@@ -71,7 +78,10 @@ async function buildAtlas(textures: string[]) {
     atlas.magFilter = NearestFilter;
     atlas.generateMipmaps = false;
     atlas.flipY = false;
+    atlas.wrapS = ClampToEdgeWrapping;
+    atlas.wrapT = ClampToEdgeWrapping;
     atlas.needsUpdate = true;
+
     return {
         atlas: atlas,
         atlasData: atlasData,
@@ -95,12 +105,30 @@ export async function createShaderMaterial() {
     const material = new ShaderMaterial(
         {
             vertexShader: ChunkVertexShader,
+            glslVersion: GLSL3,
             fragmentShader: ChunkFragmentShader,
             uniforms: {
-                chunkTexture: { value: atlasResult.atlas }
-            }
+                chunkTexture: { value: atlasResult.atlas },
+                atlasHeight: { value: atlasResult.imageY}
+            },
+            wireframe: false
         }
     );
+
+    const materialTransparent = new ShaderMaterial(
+        {
+            vertexShader: ChunkVertexShader,
+            glslVersion: GLSL3,
+            fragmentShader: ChunkFragmentShader,
+            uniforms: {
+                chunkTexture: { value: atlasResult.atlas },
+                atlasHeight: { value: atlasResult.imageY}
+            },
+            wireframe: false,
+            transparent: true
+        }
+    );
+
 
     const atlasResultFinal = {
         width: atlasResult.imageX,
@@ -112,6 +140,7 @@ export async function createShaderMaterial() {
 
     return {
         atlas: atlasResultFinal,
-        mat: material
+        mat: material,
+        matTrans: materialTransparent
     }
 }

@@ -78,8 +78,10 @@ const faceTris = [
     0, 2, 3,
 ];
 const UVs: [number, number][] = [
-    [0, 0], [1, 0], [1, 1],
-    [0, 0], [1, 1], [0, 1],
+    [0, 0],  // 0
+    [1, 0],  // 1
+    [1, 1],  // 2
+    [0, 1],  // 3
 ];
 
 const TextureIds = [
@@ -90,8 +92,58 @@ const TextureIds = [
         Right: 0,
         Top: 1,
         Bottom: 2
+    },
+    {
+        Front: 2,
+        Back: 2,
+        Left: 2,
+        Right: 2,
+        Top: 2,
+        Bottom: 2
+    },
+    {
+        Front: 5,
+        Back: 5,
+        Left: 5,
+        Right: 5,
+        Top: 5,
+        Bottom: 5
+    },
+    {
+        Front: 6,
+        Back: 6,
+        Left: 6,
+        Right: 6,
+        Top: 6,
+        Bottom: 6
+    },
+    {
+        Front: 7,
+        Back: 7,
+        Left: 7,
+        Right: 7,
+        Top: 7,
+        Bottom: 7
+    },
+    { // Snow
+        Front: 8,
+        Back: 8,
+        Left: 8,
+        Right: 8,
+        Top: 8,
+        Bottom: 8
     }
-]
+];
+
+const transparentBlockIDs = new Set([5]);
+
+// [lx, ly, lz] corners
+const frontCorners = [
+    { corner: [0, 0, 1], sides: [[-1, 0, 1], [0, -1, 1]] }, // bottom-left 
+    { corner: [1, 0, 1], sides: [[1, 0, 1], [0, -1, 1]] }, // bottom-right
+    { corner: [1, 1, 1], sides: [[1, 0, 1], [0, 1, 1]] }, // top-right
+    { corner: [0, 1, 1], sides: [[-1, 0, 1], [0, 1, 1]] }, // top-left
+];
 
 type BlockData = {
     blockType: number
@@ -113,16 +165,34 @@ type ShaderLoaderResultJustWithoutTheMaterial = {
     };
 };
 
-function packVoxelData(x: number, y: number, z: number, normal: number, index: number) {
-    //console.log("Pack: ", x, y, z, normal, index);
+
+function packVoxelData(
+    x: number,
+    y: number,
+    z: number,
+    normal: number,
+    index: number,
+    u: number,
+    v: number
+): number {
+    if (x < 0 || x > 63) throw new RangeError(`x=${x} out of range [0,63]`);
+    if (y < 0 || y > 63) throw new RangeError(`y=${y} out of range [0,63]`);
+    if (z < 0 || z > 63) throw new RangeError(`z=${z} out of range [0,63]`);
+    if (normal < 0 || normal > 7) throw new RangeError(`normal=${normal} out of range [0,7]`);
+    if (index < 0 || index > 255) throw new RangeError(`index=${index} out of range [0,255]`);
+    if (u < 0 || u > 1) throw new RangeError(`u=${u} out of range [0,1]`);
+    if (v < 0 || v > 1) throw new RangeError(`v=${v} out of range [0,1]`);
+
     let data = 0;
-    data |= (x & 0x1F);         // bits 0-4
-    data |= (y & 0x1F) << 5;    // bits 5-9
-    data |= (z & 0x1F) << 10;   // bits 10-14
-    data |= (normal & 0x7) << 15; // bits 15-17
-    data |= (index & 0xFF) << 18; // bits 18-25
-    //console.log("Got: ", data >>> 0);
-    return data >>> 0;          // ensure unsigned 32-bit int
+    data |= (x & 0x3F);           // bits 0-5
+    data |= (y & 0x3F) << 6;      // bits 6-11
+    data |= (z & 0x3F) << 12;     // bits 12-17
+    data |= (normal & 0x7) << 18; // bits 18-20
+    data |= (index & 0xFF) << 21; // bits 21-28
+    data |= (u & 0x1) << 29;      // bit 29
+    data |= (v & 0x1) << 30;      // bit 30
+
+    return data >>> 0;            // force unsigned 32-bit
 }
 
 export class ChunkBuilder {
@@ -147,6 +217,7 @@ export class ChunkBuilder {
         posXdata: Uint8Array,
         negYdata: Uint8Array,
         posYdata: Uint8Array,
+        bt: number,
     ) {
         const pos = p.clone().add(s);
         let dataArray: Uint8Array = chunkData;
@@ -204,7 +275,11 @@ export class ChunkBuilder {
             console.error(" { ERROR } Block not found. Case should not be possible. Attempted to get: ", idx);
             return false;
         }
-        return block === 0; // Air or missing block
+        if (transparentBlockIDs.has(bt)) {
+            if (transparentBlockIDs.has(block) == false && block !== 0) return false;
+            return block !== bt;
+        }
+        return block === 0 || transparentBlockIDs.has(block); // Air or missing block
     }
     private addVertex(v: number[], p: THREE.Vector3) {
         return [v[0] + p.x, v[1] + p.y, v[2] + p.z];
@@ -237,48 +312,29 @@ export class ChunkBuilder {
         return [u, v];
     }
 
-    private calculateAo(currentposition: THREE.Vector3, vertexLocal: THREE.Vector3, chunkData: Uint8Array, negZdata: Uint8Array, posZdata: Uint8Array, negXdata: Uint8Array, posXdata: Uint8Array, negYdata: Uint8Array, posYdata: Uint8Array) {
-        const bx = currentposition.x;
-        const by = currentposition.y;
-        const bz = currentposition.z;
-        const localY = vertexLocal.y; // 0 or 1
-        const localZ = vertexLocal.z; // 0 or 1
+    /*private calculateAoForCorner(
+        chunkData: Uint8Array, negZ: Uint8Array, posZ: Uint8Array, negX: Uint8Array, posX: Uint8Array, negY: Uint8Array, posY: Uint8Array,
+        basePos: THREE.Vector3,
+        cornerOffset: number[],
+        sideOffset1: number[],
+        sideOffset2: number[]
+    ): number {
+        const cPos = basePos.clone().add(new THREE.Vector3(...cornerOffset));
+        const s1Pos = basePos.clone().add(new THREE.Vector3(...sideOffset1));
+        const s2Pos = basePos.clone().add(new THREE.Vector3(...sideOffset2));
 
-        let side1Pos, side2Pos, cornerPos;
-        if (localY === 0 && localZ === 0) { // Vertex 0
-            side1Pos = new THREE.Vector3(bx, by - 1, bz);
-            side2Pos = new THREE.Vector3(bx, by, bz - 1);
-            cornerPos = new THREE.Vector3(bx, by - 1, bz - 1);
-        } else if (localY === 1 && localZ === 0) { // Vertex 1
-            side1Pos = new THREE.Vector3(bx, by + 2, bz);
-            side2Pos = new THREE.Vector3(bx, by + 1, bz - 1);
-            cornerPos = new THREE.Vector3(bx, by + 2, bz - 1);
-        } else if (localY === 0 && localZ === 1) { // Vertex 2
-            side1Pos = new THREE.Vector3(bx, by - 1, bz + 1);
-            side2Pos = new THREE.Vector3(bx, by, bz + 2);
-            cornerPos = new THREE.Vector3(bx, by - 1, bz + 2);
-        } else { // Vertex 3
-            side1Pos = new THREE.Vector3(bx, by + 2, bz + 1);
-            side2Pos = new THREE.Vector3(bx, by + 1, bz + 2);
-            cornerPos = new THREE.Vector3(bx, by + 2, bz + 2);
-        }
+        const solid = (p: THREE.Vector3) => !this.checkVoid(
+            chunkData, p, new THREE.Vector3(0, 0, 0),
+            negZ, posZ, negX, posX, negY, posY
+        );
 
-        // Check solidity (assuming checkVoid returns true for air, false for solid)
-        const side1Solid = !this.checkVoid(chunkData, side1Pos, new THREE.Vector3(0, 0, 0), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata);
-        const side2Solid = !this.checkVoid(chunkData, side2Pos, new THREE.Vector3(0, 0, 0), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata);
-        const cornerSolid = !this.checkVoid(chunkData, cornerPos, new THREE.Vector3(0, 0, 0), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata);
+        const s1 = solid(s1Pos), s2 = solid(s2Pos), c = solid(cPos);
+        if (s1 && s2) return c ? 0 : 1;   // if both sides blocked, corner only dark if diagonal is solid
+        if (s1 || s2) return 2;           // one side blocked
+        return 3;                         // open corner, brightest
+    }*/
 
-        // Calculate AO value
-        let ao = 0;
-        if (cornerSolid) ao = 3;
-        else if (side1Solid && side2Solid) ao = 2;
-        else if (side1Solid || side2Solid) ao = 1;
-        else ao = 0;
-
-        return ao;
-    }
-
-    buildGeometryFromChunkData(chunkData: Uint8Array, negZdata: Uint8Array, posZdata: Uint8Array, negXdata: Uint8Array, posXdata: Uint8Array, negYdata: Uint8Array, posYdata: Uint8Array, atlasData: ShaderLoaderResultJustWithoutTheMaterial) {
+    buildGeometryFromChunkData(chunkPos: THREE.Vector3, chunkData: Uint8Array, negZdata: Uint8Array, posZdata: Uint8Array, negXdata: Uint8Array, posXdata: Uint8Array, negYdata: Uint8Array, posYdata: Uint8Array, atlasData: ShaderLoaderResultJustWithoutTheMaterial) {
         // Indexing of  x + y * width + z * width * height
 
         const facesData: FaceData[] = [];
@@ -286,9 +342,38 @@ export class ChunkBuilder {
         const normals: number[] = [];
         const uvs: number[] = [];
         const aos: number[] = [];
+        const indices: number[] = [];
+        const indicesTransparent: number[] = [];
 
         const vertexDataPacked: number[] = [];
+        const vertexDataPackedTransparent: number[] = [];
         let facesBuilt = 0;
+        let vertexCounter = 0;
+        let vertexCounterTransparent = 0;
+
+        function pushPacked(packed: number, bt: number) {
+            if (transparentBlockIDs.has(bt)) {
+                vertexDataPackedTransparent.push(packed);
+            } else {
+                vertexDataPacked.push(packed);
+            }
+        }
+        function pushIndex(faceTris: number[], bt: number) {
+            if (transparentBlockIDs.has(bt)) {
+                for (const tri of faceTris) {
+                    indicesTransparent.push(tri + vertexCounterTransparent);
+                    
+                }
+                vertexCounterTransparent+= 4;
+            } else {
+                for (const tri of faceTris) {
+                    indices.push(tri + vertexCounter);
+                    
+                }
+                vertexCounter+= 4;
+            }
+        }
+
         for (let x = 0; x < this.chunkSize.x; x++) {
             for (let y = 0; y < this.chunkSize.y; y++) {
                 for (let z = 0; z < this.chunkSize.z; z++) {
@@ -302,117 +387,144 @@ export class ChunkBuilder {
 
                     const currentposition = new THREE.Vector3(x, y, z);
 
-                    if (this.checkVoid(chunkData, currentposition, new THREE.Vector3(0, 0, 1), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata)) {
+                    if (this.checkVoid(chunkData, currentposition, new THREE.Vector3(0, 0, 1), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata, blockType)) {
                         facesBuilt++;
-                        for (let i = 0; i < faceTris.length; i++) {
-                            const vi = faceTris[i];
-                            const vertexLocal = frontVertices[vi]; // Local vertex position, e.g., (0,0,0)
+
+
+
+                        for (let i = 0; i < frontVertices.length; i++) {
+                            const vertexLocal = frontVertices[i]; // Local vertex position, e.g., (0,0,0)
                             const vertexWorld = this.addVertex(vertexLocal, currentposition); // World position
+
                             //vertices.push(vertexWorld);
                             //normals.push(-1, 0, 0);
 
-                            
+
 
                             // UVs
                             //const [u, v] = this.getUVFor(atlasData, blockType, UVs[i], "Front", true);
                             //uvs.push(u, v);
 
-                            const packed = packVoxelData(vertexWorld[0], vertexWorld[1], vertexWorld[2], 1, TextureIds[blockType - 1]["Front"]);
-                            vertexDataPacked.push(packed);
+                            const packed = packVoxelData(vertexWorld[0], vertexWorld[1], vertexWorld[2], 1, TextureIds[blockType - 1]["Front"], UVs[i][0], UVs[i][1]);
+                            pushPacked(packed, blockType);
 
                             //aos.push(this.calculateAo(currentposition, new THREE.Vector3(...vertexLocal), chunkData, negZdata, posZdata, negXdata, posXdata, negYdata, posYdata))
                         }
+                        pushIndex(faceTris, blockType);
                     }
-                    if (this.checkVoid(chunkData, currentposition, (new THREE.Vector3(0, 0, -1)), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata)) {
+                    if (this.checkVoid(chunkData, currentposition, (new THREE.Vector3(0, 0, -1)), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata, blockType)) {
                         facesBuilt++;
-                        for (let i = 0; i < faceTris.length; i++) {
-                            const vi = faceTris[i];
-                            const vertexLocal = backVertices[vi]; // Local vertex position, e.g., (0,0,0)
+                        for (let i = 0; i < backVertices.length; i++) {
+                            const vertexLocal = backVertices[i]; // Local vertex position, e.g., (0,0,0)
                             const vertexWorld = this.addVertex(vertexLocal, currentposition); // World position
+
                             //vertices.push(vertexWorld);
                             //normals.push(-1, 0, 0);
 
-                            // UVs
-                            //const [u, v] = this.getUVFor(atlasData, blockType, UVs[i], "Back", true);
 
-                            const packed = packVoxelData(vertexWorld[0], vertexWorld[1], vertexWorld[2], 2, TextureIds[blockType - 1]["Back"]);
-                            vertexDataPacked.push(packed);
-
-                            //aos.push(this.calculateAo(currentposition, new THREE.Vector3(...vertexLocal), chunkData, negZdata, posZdata, negXdata, posXdata, negYdata, posYdata))
-                        }
-
-                    }
-                    if (this.checkVoid(chunkData, currentposition, (new THREE.Vector3(0, 1, 0)), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata)) {
-                        facesBuilt++;
-                        for (let i = 0; i < faceTris.length; i++) {
-                            const vi = faceTris[i];
-                            const vertexLocal = topVertices[vi]; // Local vertex position, e.g., (0,0,0)
-                            const vertexWorld = this.addVertex(vertexLocal, currentposition); // World position
-                            //vertices.push(vertexWorld);
-                            //normals.push(-1, 0, 0);
 
                             // UVs
-                            //const [u, v] = this.getUVFor(atlasData, blockType, UVs[i], "Top", true);
-                            //uvs.push(u, v);
-                            const packed = packVoxelData(vertexWorld[0], vertexWorld[1], vertexWorld[2], 3, TextureIds[blockType - 1]["Top"]);
-                            vertexDataPacked.push(packed);
-                            //aos.push(this.calculateAo(currentposition, new THREE.Vector3(...vertexLocal), chunkData, negZdata, posZdata, negXdata, posXdata, negYdata, posYdata))
-                        }
-
-                    }
-                    if (this.checkVoid(chunkData, currentposition, (new THREE.Vector3(0, -1, 0)), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata)) {
-                        facesBuilt++;
-                        for (let i = 0; i < faceTris.length; i++) {
-                            const vi = faceTris[i];
-                            const vertexLocal = bottomVertices[vi]; // Local vertex position, e.g., (0,0,0)
-                            const vertexWorld = this.addVertex(vertexLocal, currentposition); // World position
-                            //vertices.push(vertexWorld);
-                            //normals.push(-1, 0, 0);
-                            const packed = packVoxelData(vertexWorld[0], vertexWorld[1], vertexWorld[2], 4, TextureIds[blockType - 1]["Bottom"]);
-                            vertexDataPacked.push(packed);
-                            // UVs
-                            //const [u, v] = this.getUVFor(atlasData, blockType, UVs[i], "Bottom", true);
+                            //const [u, v] = this.getUVFor(atlasData, blockType, UVs[i], "Front", true);
                             //uvs.push(u, v);
 
+                            const packed = packVoxelData(vertexWorld[0], vertexWorld[1], vertexWorld[2], 2, TextureIds[blockType - 1]["Back"], UVs[i][0], UVs[i][1]);
+                            pushPacked(packed, blockType);
+
                             //aos.push(this.calculateAo(currentposition, new THREE.Vector3(...vertexLocal), chunkData, negZdata, posZdata, negXdata, posXdata, negYdata, posYdata))
                         }
+                        pushIndex(faceTris, blockType);
 
                     }
-                    if (this.checkVoid(chunkData, currentposition, (new THREE.Vector3(1, 0, 0)), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata)) {
+                    if (this.checkVoid(chunkData, currentposition, (new THREE.Vector3(0, 1, 0)), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata, blockType)) {
                         facesBuilt++;
-                        for (let i = 0; i < faceTris.length; i++) {
-                            const vi = faceTris[i];
-                            const vertexLocal = rightVertices[vi]; // Local vertex position, e.g., (0,0,0)
+                        for (let i = 0; i < topVertices.length; i++) {
+                            const vertexLocal = topVertices[i]; // Local vertex position, e.g., (0,0,0)
                             const vertexWorld = this.addVertex(vertexLocal, currentposition); // World position
+
                             //vertices.push(vertexWorld);
                             //normals.push(-1, 0, 0);
-                            const packed = packVoxelData(vertexWorld[0], vertexWorld[1], vertexWorld[2], 5, TextureIds[blockType - 1]["Right"]);
-                            vertexDataPacked.push(packed);
+
+
+
                             // UVs
-                            //const [u, v] = this.getUVFor(atlasData, blockType, UVs[i], "Right", true);
+                            //const [u, v] = this.getUVFor(atlasData, blockType, UVs[i], "Front", true);
                             //uvs.push(u, v);
+
+                            const packed = packVoxelData(vertexWorld[0], vertexWorld[1], vertexWorld[2], 3, TextureIds[blockType - 1]["Top"], UVs[i][0], UVs[i][1]);
+                            pushPacked(packed, blockType);
 
                             //aos.push(this.calculateAo(currentposition, new THREE.Vector3(...vertexLocal), chunkData, negZdata, posZdata, negXdata, posXdata, negYdata, posYdata))
                         }
+                        pushIndex(faceTris, blockType);
 
                     }
-                    if (this.checkVoid(chunkData, currentposition, (new THREE.Vector3(-1, 0, 0)), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata)) {
+                    if (this.checkVoid(chunkData, currentposition, (new THREE.Vector3(0, -1, 0)), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata, blockType)) {
                         facesBuilt++;
-                        for (let i = 0; i < faceTris.length; i++) {
-                            const vi = faceTris[i];
-                            const vertexLocal = leftVertices[vi]; // Local vertex position, e.g., (0,0,0)
+                        for (let i = 0; i < bottomVertices.length; i++) {
+                            const vertexLocal = bottomVertices[i]; // Local vertex position, e.g., (0,0,0)
                             const vertexWorld = this.addVertex(vertexLocal, currentposition); // World position
+
                             //vertices.push(vertexWorld);
                             //normals.push(-1, 0, 0);
-                            //console.log(vertexWorld);
+
+
 
                             // UVs
-                            //const [u, v] = this.getUVFor(atlasData, blockType, UVs[i], "Left", true);
+                            //const [u, v] = this.getUVFor(atlasData, blockType, UVs[i], "Front", true);
                             //uvs.push(u, v);
-                            const packed = packVoxelData(vertexWorld[0], vertexWorld[1], vertexWorld[2], 6, TextureIds[blockType - 1]["Left"]);
-                            vertexDataPacked.push(packed);
+
+                            const packed = packVoxelData(vertexWorld[0], vertexWorld[1], vertexWorld[2], 4, TextureIds[blockType - 1]["Bottom"], UVs[i][0], UVs[i][1]);
+                            pushPacked(packed, blockType);
+
                             //aos.push(this.calculateAo(currentposition, new THREE.Vector3(...vertexLocal), chunkData, negZdata, posZdata, negXdata, posXdata, negYdata, posYdata))
                         }
+                        pushIndex(faceTris, blockType);
+
+                    }
+                    if (this.checkVoid(chunkData, currentposition, (new THREE.Vector3(1, 0, 0)), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata, blockType)) {
+                        facesBuilt++;
+                        for (let i = 0; i < rightVertices.length; i++) {
+                            const vertexLocal = rightVertices[i]; // Local vertex position, e.g., (0,0,0)
+                            const vertexWorld = this.addVertex(vertexLocal, currentposition); // World position
+
+                            //vertices.push(vertexWorld);
+                            //normals.push(-1, 0, 0);
+
+
+
+                            // UVs
+                            //const [u, v] = this.getUVFor(atlasData, blockType, UVs[i], "Front", true);
+                            //uvs.push(u, v);
+
+                            const packed = packVoxelData(vertexWorld[0], vertexWorld[1], vertexWorld[2], 5, TextureIds[blockType - 1]["Right"], UVs[i][0], UVs[i][1]);
+                            pushPacked(packed, blockType);
+
+                            //aos.push(this.calculateAo(currentposition, new THREE.Vector3(...vertexLocal), chunkData, negZdata, posZdata, negXdata, posXdata, negYdata, posYdata))
+                        }
+                        pushIndex(faceTris, blockType);
+
+                    }
+                    if (this.checkVoid(chunkData, currentposition, (new THREE.Vector3(-1, 0, 0)), negZdata, posZdata, negXdata, posXdata, negYdata, posYdata, blockType)) {
+                        facesBuilt++;
+                        for (let i = 0; i < leftVertices.length; i++) {
+                            const vertexLocal = leftVertices[i]; // Local vertex position, e.g., (0,0,0)
+                            const vertexWorld = this.addVertex(vertexLocal, currentposition); // World position
+
+                            //vertices.push(vertexWorld);
+                            //normals.push(-1, 0, 0);
+
+
+
+                            // UVs
+                            //const [u, v] = this.getUVFor(atlasData, blockType, UVs[i], "Front", true);
+                            //uvs.push(u, v);
+
+                            const packed = packVoxelData(vertexWorld[0], vertexWorld[1], vertexWorld[2], 6, TextureIds[blockType - 1]["Left"], UVs[i][0], UVs[i][1]);
+                            pushPacked(packed, blockType);
+
+                            //aos.push(this.calculateAo(currentposition, new THREE.Vector3(...vertexLocal), chunkData, negZdata, posZdata, negXdata, posXdata, negYdata, posYdata))
+                        }
+                        pushIndex(faceTris, blockType);
 
                     }
 
@@ -428,23 +540,45 @@ export class ChunkBuilder {
             verticesFlattened.push(vertex[0], vertex[1], vertex[2]);
         }
 
+        //console.log(indices);
+
         const geometry = new THREE.BufferGeometry();
         //geometry.setAttribute('position', new THREE.Float32BufferAttribute(verticesFlattened, 3));
         //geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
         //geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
         //geometry.setAttribute('ao', new THREE.Float16BufferAttribute(aos, 1));
         //console.log(vertexDataPacked);
-        
-        geometry.setAttribute('data', new THREE.Int32BufferAttribute(vertexDataPacked, 1));
+
+        geometry.setAttribute('data', new THREE.Uint32BufferAttribute(vertexDataPacked, 1));
+        geometry.setIndex(indices);
+        geometry.setDrawRange(0, indices.length);
+
+        const geometryTransparent = new THREE.BufferGeometry();
+
+        geometryTransparent.setAttribute('data', new THREE.Uint32BufferAttribute(vertexDataPackedTransparent, 1));
+        geometryTransparent.setIndex(indicesTransparent);
+        geometryTransparent.setDrawRange(0, indicesTransparent.length);
 
         verticesFlattened.length = 0;
         vertices.length = 0;
         uvs.length = 0;
         normals.length = 0;
 
-        console.log("# faces built: ", facesBuilt)
+        //console.log("# faces built: ", facesBuilt)
 
-        return geometry;
+        // Local-space center
+        geometry.boundingSphere = new THREE.Sphere(
+            new THREE.Vector3(
+                this.chunkSize.x / 2,
+                this.chunkSize.y / 2,
+                this.chunkSize.z / 2
+            ),
+            (this.chunkSize.x * Math.sqrt(3)) / 2
+        );
+
+        geometryTransparent.boundingSphere = geometry.boundingSphere;
+
+        return [geometry, geometryTransparent];
 
 
 

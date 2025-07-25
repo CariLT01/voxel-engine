@@ -4,10 +4,15 @@ import { Chunk } from "./chunk";
 
 const COLLISION_RADIUS = 5;
 const GRAVITY_ACCEL = new Vector3(0, -32, 0);
+const GRAVITY_FLUID = new Vector3(0, -2, 0)
 const FRICTION = new Vector3(3, 0.4, 3);
+const FRICTION_UNDERWATER = new Vector3(1, 2, 1);
 
 const DRAG_JUMP = new Vector3(1.8, 0, 1.8);
 const DRAG_FALL = new Vector3(1.8, 0.4, 1.8);
+
+const NON_COLLIDEABLE = new Set([5]);
+const FLUID_BLOCKS = new Set([5]);
 
 const C1 = 73856093, C2 = 19349663, C3 = 83492791;
 function hashVec3Int(p: Vector3): number {
@@ -33,6 +38,7 @@ export class Entity {
     chunkSize: Vector3 = new Vector3(32, 32, 32);
     chunks: Map<number, Chunk> = new Map<number, Chunk>();
     isGrounded: boolean = false;
+    standingBlock: number = 0;
 
     constructor(position: Vector3, rotation = new Quaternion(), width: number = 0.6, height: number = 1.8) {
         this.precomputeOffsets();
@@ -43,6 +49,9 @@ export class Entity {
     }
 
     getFriction() {
+        if (FLUID_BLOCKS.has(this.standingBlock)) {
+            return FRICTION_UNDERWATER;
+        }
         if (this.isGrounded) {
             return FRICTION;
         }
@@ -103,7 +112,8 @@ export class Entity {
         )
     }
 
-    private isSolidBlock(chunk: Chunk, world: Vector3): boolean {
+
+    private getBlock(chunk: Chunk, world: Vector3) : number {
         const chunkX = Math.floor(world.x / this.chunkSize.x);
         const chunkY = Math.floor(world.y / this.chunkSize.y);
         const chunkZ = Math.floor(world.z / this.chunkSize.z);
@@ -118,12 +128,38 @@ export class Entity {
         const block = chunk.getData()[idx];
         if (block === null || block === undefined) {
             console.warn("Block not found. Case should not happen unless at chunk render distance borde.r");
-            return false;
+            return -1;
         }
-        return !!block && block !== 0;
+        return block;
     }
+
+    private isSolidBlock(chunk: Chunk, world: Vector3): boolean {
+        const block = this.getBlock(chunk, world);
+        if (block == -1) return false;
+        return !!block && block !== 0 && NON_COLLIDEABLE.has(block) == false;
+    }
+    getCurrentStandingBlock() {
+        const blockPos = new Vector3(
+            Math.floor(this.position.x),
+            Math.floor(this.position.y),
+            Math.floor(this.position.z)
+        );
+
+        const chunk = this.getChunkContaining(blockPos);
+        if (!chunk) return -1;
+        return this.getBlock(chunk, blockPos);
+    }
+    isStandingInFluid() {
+        return FLUID_BLOCKS.has(this.standingBlock);
+    }
+
     private updateGravity(delta: number) {
-        this.velocity.add(GRAVITY_ACCEL.clone().multiplyScalar(delta));
+        if (FLUID_BLOCKS.has(this.standingBlock)) {
+            this.velocity.add(GRAVITY_FLUID.clone().multiplyScalar(delta));
+        } else {
+            this.velocity.add(GRAVITY_ACCEL.clone().multiplyScalar(delta));
+        }
+        
     }
 
     checkCollisions(delta: number) {
@@ -198,6 +234,9 @@ export class Entity {
 
     update(delta: number) {
         this.isGrounded = false;
+
+        this.standingBlock = this.getCurrentStandingBlock();
+
         this.updateGravity(delta);
         this.updateCollider();
 
@@ -210,7 +249,7 @@ export class Entity {
             this.checkCollisions(delta);
         }
 
-        console.log("Adding: ", this.velocity);
+        //console.log("Adding: ", this.velocity);
         this.position.add(this.velocity.clone().multiplyScalar(delta));
         //this.velocity.multiplyScalar(0);
 
@@ -218,7 +257,7 @@ export class Entity {
     }
 
     addChunk(pos: Vector3, chunk: Chunk) {
-        console.log("Entity: added chunk: ", pos);
+        //console.log("Entity: added chunk: ", pos);
         this.chunks.set(hashVec3Int(pos), chunk);
     }
     removeChunk(pos: Vector3) {

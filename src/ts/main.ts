@@ -8,11 +8,27 @@ import { ChunkBuilder } from './chunkBuilder';
 import { ChunkManager } from './worldChunks';
 import { Player } from './player';
 import {PointerLockControls} from 'three/examples/jsm/controls/PointerLockControls'
+import Stats from 'stats.js';
+
+
+const stats1 = new Stats();
+stats1.dom.style.position = 'absolute';
+stats1.dom.style.top = '0px';
+stats1.dom.style.left = '0px';
+document.body.appendChild(stats1.dom);
+
+const stats2 = new Stats();
+stats2.showPanel(1); // Optional: show ms panel or any other panel index
+stats2.dom.style.position = 'absolute';
+stats2.dom.style.top = '0px';
+stats2.dom.style.left = '100px'; // Shift right so they don't overlap
+document.body.appendChild(stats2.dom);
 
 type BlockData = {
     blockType: number
 }
 
+const CHUNK_SIZE = 32;
 
 export class Game {
 
@@ -26,7 +42,8 @@ export class Game {
   constructor() {
 
     const canvas = document.querySelector("#main") as HTMLCanvasElement;
-    const context = canvas.getContext('webgl2') as unknown as WebGLRenderingContext; // Shut up Typescript;
+    const context = canvas.getContext('webgl2') as unknown as WebGLRenderingContext; // Shut up Typescript;]
+    
 
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, context: context});
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -37,7 +54,7 @@ export class Game {
 
     this.camera = new THREE.PerspectiveCamera(70);
     this.scene = new THREE.Scene();
-    this.player = new Player(this.camera, new THREE.Vector3(0, 10, 0));
+    this.player = new Player(this.camera, new THREE.Vector3(0, 100, 0));
     this.chunksManager = new ChunkManager(this.player);
 
     this.initialize();
@@ -162,19 +179,24 @@ export class Game {
 
   }
   render() {
+    stats1.begin();
     const MAX_DT = 0.05;
     this.player.updatePlayer(Math.min(MAX_DT, this.clock.getDelta()));
 
     const pos = this.player.position;
     const chunkPos = new THREE.Vector3(
-      Math.floor(pos.x / 32),
-      Math.floor(pos.y / 32),
-      Math.floor(pos.z / 32),
+      Math.floor(pos.x / CHUNK_SIZE),
+      Math.floor(pos.y / CHUNK_SIZE),
+      Math.floor(pos.z / CHUNK_SIZE),
     )
 
     this.chunksManager.update(chunkPos, this.scene);
+    stats1.end();
+    stats2.begin()
     this.renderer.render(this.scene, this.camera);
+    stats2.end();
   }
+  
 }
 
 
