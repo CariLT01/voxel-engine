@@ -6,7 +6,7 @@ import { Player } from "./player";
 import { createShaderMaterial } from "./shaderMaterialLoader";
 import { clamp } from "three/src/math/MathUtils";
 
-const RENDER_DISTANCE = 6;
+const RENDER_DISTANCE = 12;
 const CHUNK_SIZE = 32;
 const SEA_LEVEL = 20;
 
@@ -43,8 +43,8 @@ function hashVec3Int(p: Vector3): number {
 }
 
 const noise = new FastNoiseLite(1234);
-noise.SetNoiseType(FastNoiseLite.NoiseType.Perlin);             // choose Perlin
-noise.SetFrequency(.05);
+noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);             // choose Perlin
+noise.SetFrequency(1);
 
 type BlockData = {
     blockType: number
@@ -209,7 +209,7 @@ end
 
     private generateChunk(chunkPosition: Vector3) {
 
-        const FREQ = 0.05;
+        const FREQ = 1.5;
 
 
 
@@ -219,7 +219,9 @@ end
             for (let z = 0; z < CHUNK_SIZE; z++) {
                 const worldX = chunkPosition.x * CHUNK_SIZE + x;
                 const worldZ = chunkPosition.z * CHUNK_SIZE + z;
-                const pv = this.fractalNoise((worldX + 0.01) / (300 * FREQ), (worldZ + 0.01) / (300 * FREQ), 4, 3, 0.35, 1, 64.45)
+                
+                
+                const pv = this.fractalNoise((worldX + 0.01) / (300 * FREQ), (worldZ + 0.01) / (300 * FREQ), 3, 3, 0.35, 1, 64.45)
                 const base_noise_ = (this.fractalNoise(worldX / (200 * FREQ), worldZ / (200 * FREQ), 3, 3, 0.35, 1, 0) + 1) / 2
                 //const river_noise = this.fractalNoise(worldX / (300.1 * FREQ), worldZ / (300.1 * FREQ), 3, 2.580, 0.390, 1, 69);
                 
@@ -235,12 +237,16 @@ end
                 const heightBeforeRiver = 200 * base_noise_ * evalCurve(pv);
                 const h = heightBeforeRiver - 4 * river_multiplier;
 
-
+                //const h = this.fractalNoise(worldX / 15, worldZ / 15, 1, 0.35, 3, 1, 0) * 200;
                 for (let y = 0; y < CHUNK_SIZE; y++) {
                     const worldY = chunkPosition.y * CHUNK_SIZE + y;
                     const index = x + y * CHUNK_SIZE + z * CHUNK_SIZE * CHUNK_SIZE;
+
+
+                    
+
                     //const position = chunkPosition.clone().multiplyScalar(CHUNK_SIZE).add(new Vector3(x, y, z));
-                    // local pv = fractalNoise((position.X + 0.01) / 300, (position.Z + 0.01) / 300, 4, 3, 0.35, 1, 64.45)
+                    //local pv = fractalNoise((position.X + 0.01) / 300, (position.Z + 0.01) / 300, 4, 3, 0.35, 1, 64.45)
                     const isWaterReservoir = h < SEA_LEVEL  // Below sea level
                         && worldY <= SEA_LEVEL            // Not above water surface
                         && worldY > h;
