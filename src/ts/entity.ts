@@ -1,6 +1,7 @@
 import { Quaternion, Vector3 } from "three";
 import { Collider } from "./collider";
 import { Chunk } from "./chunk";
+import { CollideableBlockTypes } from "./BlockTypes";
 
 const COLLISION_RADIUS = 5;
 const GRAVITY_ACCEL = new Vector3(0, -32, 0);
@@ -122,10 +123,7 @@ export class Entity {
         const localY = world.y - chunkY * this.chunkSize.y;
         const localZ = world.z - chunkZ * this.chunkSize.z;
 
-        const idx = localX
-            + localY * this.chunkSize.x
-            + localZ * this.chunkSize.x * this.chunkSize.y;
-        const block = chunk.getData()[idx];
+        const block = chunk.getData().getBlockAt(localX, localY, localZ);
         if (block === null || block === undefined) {
             console.warn("Block not found. Case should not happen unless at chunk render distance borde.r");
             return -1;
@@ -136,7 +134,11 @@ export class Entity {
     private isSolidBlock(chunk: Chunk, world: Vector3): boolean {
         const block = this.getBlock(chunk, world);
         if (block == -1) return false;
-        return !!block && block !== 0 && NON_COLLIDEABLE.has(block) == false;
+        
+        const blockPaletteData = chunk.getData().getPaletteEntryFromPaletteIndex(block);
+        const blockIndex = blockPaletteData.blockType;
+
+        return CollideableBlockTypes.has(blockIndex);
     }
     getCurrentStandingBlock() {
         const blockPos = new Vector3(

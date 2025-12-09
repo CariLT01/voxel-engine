@@ -5,6 +5,8 @@ import { ChunkBuilder } from "./chunkBuilder";
 import { Player } from "./player";
 import { createShaderMaterial } from "./shaderMaterialLoader";
 import { clamp } from "three/src/math/MathUtils";
+import { ChunkData } from "./chunkData";
+import { BlockToIndexMap } from "./BlockTypes";
 
 const RENDER_DISTANCE = 12;
 const CHUNK_SIZE = 32;
@@ -207,148 +209,37 @@ end
         return clamp(value, -1, 1);
     }
 
-    private generateChunk(chunkPosition: Vector3) {
+    private generateChunk(chunkPosition: Vector3) : ChunkData {
 
         const FREQ = 1.5;
 
 
 
-        const ChunkData: Uint8Array = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
+        const chunkData: ChunkData = new ChunkData();
         let numNonAir = 0;
         for (let x = 0; x < CHUNK_SIZE; x++) {
             for (let z = 0; z < CHUNK_SIZE; z++) {
                 const worldX = chunkPosition.x * CHUNK_SIZE + x;
                 const worldZ = chunkPosition.z * CHUNK_SIZE + z;
                 
-                
-                const pv = this.fractalNoise((worldX + 0.01) / (300 * FREQ), (worldZ + 0.01) / (300 * FREQ), 3, 3, 0.35, 1, 64.45)
                 const base_noise_ = (this.fractalNoise(worldX / (200 * FREQ), worldZ / (200 * FREQ), 3, 3, 0.35, 1, 0) + 1) / 2
-                //const river_noise = this.fractalNoise(worldX / (300.1 * FREQ), worldZ / (300.1 * FREQ), 3, 2.580, 0.390, 1, 69);
-                
-                let river_multiplier = 0;
-                /*if (Math.abs(river_noise) < 0.025) {
-                    river_multiplier = 1;
-                }
-                else if (Math.abs(river_noise) < 0.05) {
-                    const dif = (Math.abs(river_noise) - 0.025) / 0.025;
-                    river_multiplier = 1 - dif;
-                }*/
-
-                const heightBeforeRiver = 200 * base_noise_ * evalCurve(pv);
-                const h = heightBeforeRiver - 4 * river_multiplier;
+                const h = base_noise_ * 100;
 
                 //const h = this.fractalNoise(worldX / 15, worldZ / 15, 1, 0.35, 3, 1, 0) * 200;
                 for (let y = 0; y < CHUNK_SIZE; y++) {
                     const worldY = chunkPosition.y * CHUNK_SIZE + y;
-                    const index = x + y * CHUNK_SIZE + z * CHUNK_SIZE * CHUNK_SIZE;
-
+                    
+                    if (worldY < h) {
+                        chunkData.setBlockAt(x, y, z, {
+                            blockType: BlockToIndexMap.get("grass_block") as number,
+                        });
+                    } else {
+                        chunkData.setBlockAt(x, y, z, {
+                            blockType: BlockToIndexMap.get("air") as number
+                        });
+                    }
 
                     
-
-                    //const position = chunkPosition.clone().multiplyScalar(CHUNK_SIZE).add(new Vector3(x, y, z));
-                    //local pv = fractalNoise((position.X + 0.01) / 300, (position.Z + 0.01) / 300, 4, 3, 0.35, 1, 64.45)
-                    const isWaterReservoir = h < SEA_LEVEL  // Below sea level
-                        && worldY <= SEA_LEVEL            // Not above water surface
-                        && worldY > h;
-
-                    /* 
-                    	if river_multiplier > 0 and heightBeforeRiver < 2000 * 0.05 then
-		local river_depth = 4 * river_multiplier  -- how deep the river cuts
-		-- river surface follows terrain noise
-		local riverSurface = heightBeforeRiver - 2  -- slight carve below terrain
-		if position.Y <= riverSurface and position.Y > riverSurface - river_depth then
-			return Enum.Material.Water
-		end
-		if position.Y < riverSurface - river_depth and position.Y > riverSurface - river_depth - 2 then
-			return Enum.Material.Mud
-		end
-	end
-                    */
-
-                    if (river_multiplier > 0 && heightBeforeRiver) {
-                        const river_depth = 4 * river_multiplier;
-                        const river_surface = heightBeforeRiver - 2;
-                        if (worldY <= river_surface && worldY > river_surface - river_depth) {
-                            ChunkData[index] = 5; // Water
-                            continue;
-                        }
-                        if (worldY < river_surface - river_depth && worldY > river_surface - river_depth - 2) {
-                            ChunkData[index] = 2; // Dirt
-                            numNonAir++;
-                            continue;
-                        }
-                    }
-
-                    if (!isWaterReservoir && worldY <= h) {
-                        const caveNoise = this.fractalNoise3D(worldX / (25 * FREQ), worldY / (25 * FREQ), worldZ / (48 * FREQ), 3, 3, 0.35, 1);
-                        if (caveNoise > 0.4) {
-                            ChunkData[index] = 0;
-                            continue;
-                        }
-                    }
-
-                    const sand_threshold = 1
-                    if (h >= SEA_LEVEL && h < SEA_LEVEL + sand_threshold && worldY < h) {
-                        ChunkData[index] = 4; // Sand
-                        numNonAir++;
-                        continue;
-                    }
-
-                    if (h < SEA_LEVEL) {
-                        if (worldY < h && worldY > h - 2) {
-                            ChunkData[index] = 2; // Dirt
-                            numNonAir++;
-                            continue;
-                        }
-                       
-                        if (worldY <= SEA_LEVEL && worldY > h) {
-                            ChunkData[index] = 5; // Water
-                            continue;
-                        }
-                    }
-
-                    if (h > 75 && worldY < h) {
-                        if (h < 90) {
-                            ChunkData[index] = 3; // Stone
-                            numNonAir++;
-                            continue;
-                        } else if (worldY < h - 2) {
-                            ChunkData[index] = 3; // Stone
-                            numNonAir++;
-                            continue;
-                        } else {
-                            ChunkData[index] = 6; // Snow
-                            numNonAir++;
-                            continue;
-                        }
-
-                    }
-                    if (h >= 90 && worldY < h) {
-                        ChunkData[index] = 6; // Snow
-                        numNonAir++;
-                        continue;
-                    }
-
-
-
-
-
-
-                    //const v = noise.GetNoise((x + chunkPosition.x * CHUNK_SIZE) * FREQ, 0, (z + chunkPosition.z * CHUNK_SIZE) * FREQ);
-                    const y_ = worldY;
-                    if (y_ < h - 4) {
-                        ChunkData[index] = 3; // Stone
-                        numNonAir++;
-                    }
-                    else if (y_ < h - 1) {
-                        ChunkData[index] = 2; // Dirt
-                        numNonAir++;
-                    } else if (y_ < h) {
-                        ChunkData[index] = 1; // Grass
-                        numNonAir++;
-                    } else {
-                        ChunkData[index] = 0; // Air
-                    }
 
 
 
@@ -358,7 +249,10 @@ end
         if (numNonAir === 0) {
             console.warn("Generated chunk filled with only air");
         }
-        return ChunkData;
+
+        chunkData.flushChanges();
+
+        return chunkData;
     }
 
     private hasAllNeighbors(chunkPosition: Vector3) {

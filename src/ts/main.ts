@@ -28,7 +28,7 @@ type BlockData = {
     blockType: number
 }
 
-const CHUNK_SIZE = 32;
+const CHUNK_SIZE = 16;
 
 export class Game {
 
