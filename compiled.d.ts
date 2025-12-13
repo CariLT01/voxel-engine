@@ -330,6 +330,424 @@ export namespace game {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of a JoinServer. */
+    interface IJoinServer {
+
+        /** JoinServer username */
+        username?: (string|null);
+    }
+
+    /** Represents a JoinServer. */
+    class JoinServer implements IJoinServer {
+
+        /**
+         * Constructs a new JoinServer.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: game.IJoinServer);
+
+        /** JoinServer username. */
+        public username: string;
+
+        /**
+         * Creates a new JoinServer instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns JoinServer instance
+         */
+        public static create(properties?: game.IJoinServer): game.JoinServer;
+
+        /**
+         * Encodes the specified JoinServer message. Does not implicitly {@link game.JoinServer.verify|verify} messages.
+         * @param message JoinServer message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: game.IJoinServer, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified JoinServer message, length delimited. Does not implicitly {@link game.JoinServer.verify|verify} messages.
+         * @param message JoinServer message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: game.IJoinServer, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a JoinServer message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns JoinServer
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): game.JoinServer;
+
+        /**
+         * Decodes a JoinServer message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns JoinServer
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): game.JoinServer;
+
+        /**
+         * Verifies a JoinServer message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a JoinServer message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns JoinServer
+         */
+        public static fromObject(object: { [k: string]: any }): game.JoinServer;
+
+        /**
+         * Creates a plain object from a JoinServer message. Also converts values to other types if specified.
+         * @param message JoinServer
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: game.JoinServer, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this JoinServer to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for JoinServer
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a PlayerPositionUpdate. */
+    interface IPlayerPositionUpdate {
+
+        /** PlayerPositionUpdate x */
+        x?: (number|null);
+
+        /** PlayerPositionUpdate y */
+        y?: (number|null);
+
+        /** PlayerPositionUpdate z */
+        z?: (number|null);
+    }
+
+    /** Represents a PlayerPositionUpdate. */
+    class PlayerPositionUpdate implements IPlayerPositionUpdate {
+
+        /**
+         * Constructs a new PlayerPositionUpdate.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: game.IPlayerPositionUpdate);
+
+        /** PlayerPositionUpdate x. */
+        public x: number;
+
+        /** PlayerPositionUpdate y. */
+        public y: number;
+
+        /** PlayerPositionUpdate z. */
+        public z: number;
+
+        /**
+         * Creates a new PlayerPositionUpdate instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns PlayerPositionUpdate instance
+         */
+        public static create(properties?: game.IPlayerPositionUpdate): game.PlayerPositionUpdate;
+
+        /**
+         * Encodes the specified PlayerPositionUpdate message. Does not implicitly {@link game.PlayerPositionUpdate.verify|verify} messages.
+         * @param message PlayerPositionUpdate message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: game.IPlayerPositionUpdate, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified PlayerPositionUpdate message, length delimited. Does not implicitly {@link game.PlayerPositionUpdate.verify|verify} messages.
+         * @param message PlayerPositionUpdate message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: game.IPlayerPositionUpdate, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a PlayerPositionUpdate message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns PlayerPositionUpdate
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): game.PlayerPositionUpdate;
+
+        /**
+         * Decodes a PlayerPositionUpdate message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns PlayerPositionUpdate
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): game.PlayerPositionUpdate;
+
+        /**
+         * Verifies a PlayerPositionUpdate message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a PlayerPositionUpdate message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns PlayerPositionUpdate
+         */
+        public static fromObject(object: { [k: string]: any }): game.PlayerPositionUpdate;
+
+        /**
+         * Creates a plain object from a PlayerPositionUpdate message. Also converts values to other types if specified.
+         * @param message PlayerPositionUpdate
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: game.PlayerPositionUpdate, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this PlayerPositionUpdate to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for PlayerPositionUpdate
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a PlayerBroadcastPositionUpdateSingle. */
+    interface IPlayerBroadcastPositionUpdateSingle {
+
+        /** PlayerBroadcastPositionUpdateSingle x */
+        x?: (number|null);
+
+        /** PlayerBroadcastPositionUpdateSingle y */
+        y?: (number|null);
+
+        /** PlayerBroadcastPositionUpdateSingle z */
+        z?: (number|null);
+
+        /** PlayerBroadcastPositionUpdateSingle username */
+        username?: (string|null);
+    }
+
+    /** Represents a PlayerBroadcastPositionUpdateSingle. */
+    class PlayerBroadcastPositionUpdateSingle implements IPlayerBroadcastPositionUpdateSingle {
+
+        /**
+         * Constructs a new PlayerBroadcastPositionUpdateSingle.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: game.IPlayerBroadcastPositionUpdateSingle);
+
+        /** PlayerBroadcastPositionUpdateSingle x. */
+        public x: number;
+
+        /** PlayerBroadcastPositionUpdateSingle y. */
+        public y: number;
+
+        /** PlayerBroadcastPositionUpdateSingle z. */
+        public z: number;
+
+        /** PlayerBroadcastPositionUpdateSingle username. */
+        public username: string;
+
+        /**
+         * Creates a new PlayerBroadcastPositionUpdateSingle instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns PlayerBroadcastPositionUpdateSingle instance
+         */
+        public static create(properties?: game.IPlayerBroadcastPositionUpdateSingle): game.PlayerBroadcastPositionUpdateSingle;
+
+        /**
+         * Encodes the specified PlayerBroadcastPositionUpdateSingle message. Does not implicitly {@link game.PlayerBroadcastPositionUpdateSingle.verify|verify} messages.
+         * @param message PlayerBroadcastPositionUpdateSingle message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: game.IPlayerBroadcastPositionUpdateSingle, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified PlayerBroadcastPositionUpdateSingle message, length delimited. Does not implicitly {@link game.PlayerBroadcastPositionUpdateSingle.verify|verify} messages.
+         * @param message PlayerBroadcastPositionUpdateSingle message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: game.IPlayerBroadcastPositionUpdateSingle, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a PlayerBroadcastPositionUpdateSingle message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns PlayerBroadcastPositionUpdateSingle
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): game.PlayerBroadcastPositionUpdateSingle;
+
+        /**
+         * Decodes a PlayerBroadcastPositionUpdateSingle message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns PlayerBroadcastPositionUpdateSingle
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): game.PlayerBroadcastPositionUpdateSingle;
+
+        /**
+         * Verifies a PlayerBroadcastPositionUpdateSingle message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a PlayerBroadcastPositionUpdateSingle message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns PlayerBroadcastPositionUpdateSingle
+         */
+        public static fromObject(object: { [k: string]: any }): game.PlayerBroadcastPositionUpdateSingle;
+
+        /**
+         * Creates a plain object from a PlayerBroadcastPositionUpdateSingle message. Also converts values to other types if specified.
+         * @param message PlayerBroadcastPositionUpdateSingle
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: game.PlayerBroadcastPositionUpdateSingle, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this PlayerBroadcastPositionUpdateSingle to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for PlayerBroadcastPositionUpdateSingle
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a PlayerBroadcastPositionUpdateBatched. */
+    interface IPlayerBroadcastPositionUpdateBatched {
+
+        /** PlayerBroadcastPositionUpdateBatched playerPositionUpdates */
+        playerPositionUpdates?: (game.IPlayerBroadcastPositionUpdateSingle[]|null);
+    }
+
+    /** Represents a PlayerBroadcastPositionUpdateBatched. */
+    class PlayerBroadcastPositionUpdateBatched implements IPlayerBroadcastPositionUpdateBatched {
+
+        /**
+         * Constructs a new PlayerBroadcastPositionUpdateBatched.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: game.IPlayerBroadcastPositionUpdateBatched);
+
+        /** PlayerBroadcastPositionUpdateBatched playerPositionUpdates. */
+        public playerPositionUpdates: game.IPlayerBroadcastPositionUpdateSingle[];
+
+        /**
+         * Creates a new PlayerBroadcastPositionUpdateBatched instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns PlayerBroadcastPositionUpdateBatched instance
+         */
+        public static create(properties?: game.IPlayerBroadcastPositionUpdateBatched): game.PlayerBroadcastPositionUpdateBatched;
+
+        /**
+         * Encodes the specified PlayerBroadcastPositionUpdateBatched message. Does not implicitly {@link game.PlayerBroadcastPositionUpdateBatched.verify|verify} messages.
+         * @param message PlayerBroadcastPositionUpdateBatched message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: game.IPlayerBroadcastPositionUpdateBatched, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified PlayerBroadcastPositionUpdateBatched message, length delimited. Does not implicitly {@link game.PlayerBroadcastPositionUpdateBatched.verify|verify} messages.
+         * @param message PlayerBroadcastPositionUpdateBatched message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: game.IPlayerBroadcastPositionUpdateBatched, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a PlayerBroadcastPositionUpdateBatched message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns PlayerBroadcastPositionUpdateBatched
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): game.PlayerBroadcastPositionUpdateBatched;
+
+        /**
+         * Decodes a PlayerBroadcastPositionUpdateBatched message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns PlayerBroadcastPositionUpdateBatched
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): game.PlayerBroadcastPositionUpdateBatched;
+
+        /**
+         * Verifies a PlayerBroadcastPositionUpdateBatched message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a PlayerBroadcastPositionUpdateBatched message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns PlayerBroadcastPositionUpdateBatched
+         */
+        public static fromObject(object: { [k: string]: any }): game.PlayerBroadcastPositionUpdateBatched;
+
+        /**
+         * Creates a plain object from a PlayerBroadcastPositionUpdateBatched message. Also converts values to other types if specified.
+         * @param message PlayerBroadcastPositionUpdateBatched
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: game.PlayerBroadcastPositionUpdateBatched, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this PlayerBroadcastPositionUpdateBatched to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for PlayerBroadcastPositionUpdateBatched
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of a Packet. */
     interface IPacket {
 
@@ -338,6 +756,18 @@ export namespace game {
 
         /** Packet chunkData */
         chunkData?: (game.IChunkData|null);
+
+        /** Packet joinServer */
+        joinServer?: (game.IJoinServer|null);
+
+        /** Packet playerPositionUpdate */
+        playerPositionUpdate?: (game.IPlayerPositionUpdate|null);
+
+        /** Packet playerBroadcastPositionUpdateSingle */
+        playerBroadcastPositionUpdateSingle?: (game.IPlayerBroadcastPositionUpdateSingle|null);
+
+        /** Packet playerBroadcastPositionUpdateBatched */
+        playerBroadcastPositionUpdateBatched?: (game.IPlayerBroadcastPositionUpdateBatched|null);
     }
 
     /** Represents a Packet. */
@@ -355,8 +785,20 @@ export namespace game {
         /** Packet chunkData. */
         public chunkData?: (game.IChunkData|null);
 
+        /** Packet joinServer. */
+        public joinServer?: (game.IJoinServer|null);
+
+        /** Packet playerPositionUpdate. */
+        public playerPositionUpdate?: (game.IPlayerPositionUpdate|null);
+
+        /** Packet playerBroadcastPositionUpdateSingle. */
+        public playerBroadcastPositionUpdateSingle?: (game.IPlayerBroadcastPositionUpdateSingle|null);
+
+        /** Packet playerBroadcastPositionUpdateBatched. */
+        public playerBroadcastPositionUpdateBatched?: (game.IPlayerBroadcastPositionUpdateBatched|null);
+
         /** Packet payload. */
-        public payload?: ("chunkRequest"|"chunkData");
+        public payload?: ("chunkRequest"|"chunkData"|"joinServer"|"playerPositionUpdate"|"playerBroadcastPositionUpdateSingle"|"playerBroadcastPositionUpdateBatched");
 
         /**
          * Creates a new Packet instance using the specified properties.

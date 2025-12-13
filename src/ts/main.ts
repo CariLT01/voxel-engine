@@ -3,6 +3,8 @@ import { ChunkManager } from './worldChunks';
 import { Player } from './player';
 import Stats from 'stats.js';
 import { ClientNetworkingService } from './Networking';
+import { game } from '../../compiled';
+import { PlayersManager } from './PlayersManager';
 
 
 const stats1 = new Stats();
@@ -30,12 +32,16 @@ export class Game {
     camera: THREE.PerspectiveCamera;
     scene: THREE.Scene;
     chunksManager: ChunkManager;
+    playersManager: PlayersManager;
     player: Player;
     clock: THREE.Clock = new THREE.Clock();
 
+    private playerUsername: string;
 
 
-    constructor() {
+    constructor(playerUsername: string) {
+
+        this.playerUsername = playerUsername;
 
         const canvas = document.querySelector("#main") as HTMLCanvasElement;
         const context = canvas.getContext('webgl2') as unknown as WebGLRenderingContext; // Shut up Typescript;]
@@ -52,25 +58,40 @@ export class Game {
         this.scene = new THREE.Scene();
         this.player = new Player(this.camera, new THREE.Vector3(0, 100, 0));
         this.chunksManager = new ChunkManager(this.player);
+        this.playersManager = new PlayersManager(this.playerUsername);
 
         this.initialize();
         this.loadControls();
-        this.loadDebugObjects();
-        this.loadLighting();
 
         ClientNetworkingService.connect("http://localhost:9000", () => {
-            console.log("Connected to server");
+
+            this._handleOnConnectedToServer();
         })
         //this.loadSky();
 
     }
 
+    private _handleOnConnectedToServer() {
+        console.log("Connected to the server!");
+
+        // Send HELLO packet
+
+        const joinPacket = game.Packet.create(
+            {
+                joinServer: {
+                    username: this.playerUsername
+                }
+            }
+        );
+
+        const buffer = game.Packet.encode(joinPacket).finish();
+
+        ClientNetworkingService.send(buffer);
+    }
+
     initialize() {
-        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 0.5; // reduce brightness, tweak this value
 
         this.camera.aspect = innerWidth / innerHeight;
-        this.camera.position.set(0, 5, 10);
         this.camera.updateProjectionMatrix();
 
         window.addEventListener("resize", () => {
@@ -88,33 +109,6 @@ export class Game {
 
     }
 
-    private connectServer() {
-        const socket = new WebSocket("ws://localhost:6000/");
-
-        socket.onopen = () => {
-            console.log("Connected to the server");
-        }
-    }
-
-    loadDebugObjects() {
-        const planeGeometry = new THREE.PlaneGeometry(20, 20);
-
-        const planeMesh = new THREE.Mesh(planeGeometry, new THREE.MeshPhysicalMaterial({ color: 0xaa0000 }));
-        planeMesh.rotateY(Math.PI / 2);
-
-        this.scene.add(planeMesh);
-
-        const axesHelper = new THREE.AxesHelper(100);
-        this.scene.add(axesHelper);
-
-        const gridHelper = new THREE.GridHelper(32 * 100, 100);
-        this.scene.add(gridHelper);
-    }
-    loadLighting() {
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(5, 10, 7);
-        this.scene.add(light);
-    }
 
     render() {
         stats1.begin();
@@ -146,6 +140,10 @@ export class Game {
                 this.chunksManager.processChunkDataPacket(entry);
             } else if (entry.chunkRequest){
                 console.log("got chunk req");
+            } else if (entry.joinServer) {
+                this.playersManager.processPacket(this.scene, entry);
+            } else if (entry.playerBroadcastPositionUpdateBatched) {
+                this.playersManager.processPacket(this.scene, entry);
             } else {
                 console.warn("no pckt found");
             }
@@ -154,19 +152,43 @@ export class Game {
         ClientNetworkingService.clearQueue();
     }
 
+    private sendPlayerPositionUpdates() {
+        
+        const position = this.player.position;
+
+        const packet = game.Packet.create(
+            {
+                playerPositionUpdate: {
+                    x: position.x,
+                    y: position.y,
+                    z: position.z
+                }
+            }
+        );
+
+        const buffer = game.Packet.encode(packet).finish();
+
+        ClientNetworkingService.send(buffer);
+    }
+
     tick() {
         this.processQueuedPackets();
+        this.sendPlayerPositionUpdates();
     }
 
 }
 
 
-const game = new Game();
+const promptedUsername = prompt("Username");
+if (promptedUsername) {
+    const clientGame = new Game(promptedUsername);
 
-function tick() {
-    game.tick();
-    game.render();
-    requestAnimationFrame(tick);
+    function tick() {
+        clientGame.tick();
+        clientGame.render();
+        requestAnimationFrame(tick);
+    }
+
+    tick();
 }
 
-tick();

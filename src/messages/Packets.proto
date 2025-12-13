@@ -22,9 +22,35 @@ message ChunkRequest {
     int32 chunkZ = 3;
 }
 
+message JoinServer {
+    string username = 1;
+}
+
+message PlayerPositionUpdate {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
+
+message PlayerBroadcastPositionUpdateSingle {
+    float x = 1;
+    float y = 2;
+    float z = 3;
+    string username = 4;
+}
+
+message PlayerBroadcastPositionUpdateBatched {
+    repeated PlayerBroadcastPositionUpdateSingle playerPositionUpdates = 1;
+}
+
 message Packet {
     oneof payload {
         ChunkRequest chunkRequest = 1;
         ChunkData chunkData = 2;
+        JoinServer joinServer = 3;
+        PlayerPositionUpdate playerPositionUpdate = 4;
+        PlayerBroadcastPositionUpdateSingle playerBroadcastPositionUpdateSingle = 5;
+        PlayerBroadcastPositionUpdateBatched playerBroadcastPositionUpdateBatched = 6;
     }
 }
+

@@ -5,7 +5,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack",
-    "genProtobufTypes": "npx pbjs -t static-module src/messages/Packets.proto -o compiled.js && npx pbts -o compiled.d.ts compiled.js"
+    "genProtobufTypes": "npx pbjs -t static-module -w es6 -o compiled.js src/messages/Packets.proto && npx pbts -o compiled.d.ts compiled.js"
   },
   "keywords": [],
   "author": "",
@@ -32,6 +32,7 @@
     "pbjs": "^0.0.14",
     "pbts": "^4.0.7",
     "protobufjs": "^7.5.4",
+    "webpackbar": "^7.0.0",
     "ws": "^8.18.3"
   }
 }

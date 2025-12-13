@@ -1,5 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpackbar = require("webpackbar")
 
 module.exports = {
     mode: 'development', // or 'production'
@@ -48,6 +49,16 @@ module.exports = {
             template: './src/index.html', // your HTML template file
             inject: 'body', // inject scripts before </body>
         }),
+            new webpackbar({
+      name: 'MC Client',
+      color: '#b5f58aff',
+      basic: false,       // show nicer bar
+      reporter: 'fancy',  // 'fancy' shows module names
+      profile: true,      // show build profile after finish
+      fancy: {            // extra options (some versions)
+        // optionally control width, etc.
+      }
+    })
     ],
     cache: {
         type: 'filesystem', // 'memory' is default
