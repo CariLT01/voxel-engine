@@ -1,7 +1,12 @@
+import { BlockTypeIndex } from "./BlockTypes";
 import { CHUNK_SIZE } from "./Config";
 
-type PaletteEntry = {
-    blockType: number;
+
+export type ChunkPaletteIndex = number & { readonly __brand: unique symbol };
+export type ChunkPaletteHash = number & {readonly __brand: unique symbol };
+
+export type PaletteEntry = {
+    blockType: BlockTypeIndex;
 }
 
 function indexRemap<T>(original: T[], filtered: T[]): Map<number, number> {
@@ -19,20 +24,24 @@ function indexRemap<T>(original: T[], filtered: T[]): Map<number, number> {
   return remap;
 }
 
-function hashPaletteEntry(entry: PaletteEntry) {
-    return entry.blockType;
+function hashPaletteEntry(entry: PaletteEntry) : ChunkPaletteHash {
+    return entry.blockType as unknown as ChunkPaletteHash;
 }
+
+
 
 export class ChunkData {
 
     private blockArray: Uint8Array = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
     private palette: PaletteEntry[] = [];
-    private paletteHashesContainCheck: Set<number> = new Set(); // faster does chunk contain palette check
-    private paletteHashes: Map<number, number> = new Map(); // slightly slower, for index remap
+    private paletteHashesContainCheck: Set<ChunkPaletteHash> = new Set(); // faster does chunk contain palette check
+    private paletteHashes: Map<ChunkPaletteHash, ChunkPaletteIndex> = new Map(); // slightly slower, for index remap
 
 
     /* Queued palette entries when setBlock was used */
     private queuedMaterials: PaletteEntry[] = [];
+    private queuedMaterialsHashes: Map<ChunkPaletteHash, number> = new Map();
+
 
     constructor() {
 
@@ -54,7 +63,7 @@ export class ChunkData {
         for (let index = 0; index < this.palette.length; index++) {
             const entry = this.palette[index];
             const hash = hashPaletteEntry(entry);
-            this.paletteHashes.set(hash, index);
+            this.paletteHashes.set(hash, index as ChunkPaletteIndex);
             this.paletteHashesContainCheck.add(hash);
         }
     }
@@ -71,12 +80,18 @@ export class ChunkData {
         // Add queued materials
         for (const material of this.queuedMaterials) {
             this.palette.push(material);
+
+            if (this.palette.length == 2) {
+                console.log("Got element with idx 1");
+            }
+            // console.log("queued material: ", material);
         }
 
         this.queuedMaterials = [];
+        this.queuedMaterialsHashes.clear();
 
         // Save palette
-        const paletteBefore = this.palette.copyWithin(0, 0, this.palette.length);
+        const paletteBefore = [...this.palette];
 
 
         // --- Step 1: Detect deleted block types (or unecessary and lingering block types)
@@ -130,6 +145,10 @@ export class ChunkData {
         this._computePaletteHashes();
     }
 
+    setBlockAtIndex(i: number, blockType: ChunkPaletteIndex) {
+        this.blockArray[i] = blockType;
+    }
+
     setBlockAt(x: number, y: number, z: number, blockType: PaletteEntry) {
 
         const hashedPalette = hashPaletteEntry(blockType);
@@ -137,10 +156,31 @@ export class ChunkData {
         let paletteIndex = -1;
         const blockIndex = this._indexFromBlockPosition(x, y, z);
 
-        if (this.paletteHashesContainCheck.has(hashedPalette) == false) {
-            this.queuedMaterials.push(blockType);
+        if (blockIndex > this.blockArray.length) {
+            throw new Error(`Position: ${x} ${y} ${z} is out of bounds`);
+        }
 
-            paletteIndex = this.palette.length;
+        if (this.paletteHashesContainCheck.has(hashedPalette) == false) {
+
+            
+            if (this.queuedMaterialsHashes.has(hashedPalette) == false) {
+                this.queuedMaterials.push(blockType);
+                paletteIndex = this.palette.length + this.queuedMaterials.length - 1;
+                this.queuedMaterialsHashes.set(hashedPalette, this.queuedMaterials.length - 1);
+
+                console.log("Requires adding a new block type: ", blockType.blockType);
+            } else {
+                const queuedMaterialIndex = this.queuedMaterialsHashes.get(hashedPalette);
+
+                if (queuedMaterialIndex == undefined) {
+                    throw new Error("Queued material index not found");
+                }
+
+                paletteIndex = this.palette.length + queuedMaterialIndex;
+            }
+            
+
+            
         } else {
 
             const index = this.paletteHashes.get(hashedPalette);;
@@ -162,14 +202,25 @@ export class ChunkData {
 
     }
 
-    getBlockAt(x: number, y: number, z: number) {
+    getBlockAt(x: number, y: number, z: number) : ChunkPaletteIndex {
         const blockIndex = this._indexFromBlockPosition(x, y, z);
 
-        return this.blockArray[blockIndex];
+        const blockData = this.blockArray[blockIndex];
+
+        if (blockData == undefined) {
+            throw new Error(`Block with index: ${blockIndex} was not found, position ${x} ${y} ${z} is out of bounds`);
+        }
+
+        return blockData as ChunkPaletteIndex;
     }
 
-    getPaletteEntryFromPaletteIndex(index: number) {
-        return this.palette[index];
+    getPaletteEntryFromPaletteIndex(index: ChunkPaletteIndex): PaletteEntry {
+        const paletteData = this.palette[index];;
+        if (paletteData == undefined) {
+            console.error(this.palette);
+            throw new Error(`Palette with index: ${index} was not found`);
+        }
+        return paletteData;
     }
 
     getBlockArray() {

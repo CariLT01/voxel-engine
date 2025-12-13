@@ -2,6 +2,7 @@ import { Quaternion, Vector3 } from "three";
 import { Collider } from "./collider";
 import { Chunk } from "./chunk";
 import { CollideableBlockTypes } from "./BlockTypes";
+import { CHUNK_SIZE } from "./Config";
 
 const COLLISION_RADIUS = 5;
 const GRAVITY_ACCEL = new Vector3(0, -32, 0);
@@ -36,7 +37,6 @@ export class Entity {
 
     collider: Collider = new Collider(new Vector3(), new Vector3());
     offsets: Set<Vector3> = new Set<Vector3>();
-    chunkSize: Vector3 = new Vector3(32, 32, 32);
     chunks: Map<number, Chunk> = new Map<number, Chunk>();
     isGrounded: boolean = false;
     standingBlock: number = 0;
@@ -80,9 +80,9 @@ export class Entity {
 
     private getChunkContaining(world: Vector3): Chunk | undefined {
         const cPos = new Vector3(
-            Math.floor(world.x / this.chunkSize.x),
-            Math.floor(world.y / this.chunkSize.y),
-            Math.floor(world.z / this.chunkSize.z)
+            Math.floor(world.x / CHUNK_SIZE),
+            Math.floor(world.y / CHUNK_SIZE),
+            Math.floor(world.z / CHUNK_SIZE)
         );
         return this.chunks.get(hashVec3Int(cPos));
     }
@@ -114,14 +114,14 @@ export class Entity {
     }
 
 
-    private getBlock(chunk: Chunk, world: Vector3) : number {
-        const chunkX = Math.floor(world.x / this.chunkSize.x);
-        const chunkY = Math.floor(world.y / this.chunkSize.y);
-        const chunkZ = Math.floor(world.z / this.chunkSize.z);
+    private getBlock(chunk: Chunk, world: Vector3) {
+        const chunkX = Math.floor(world.x / CHUNK_SIZE);
+        const chunkY = Math.floor(world.y / CHUNK_SIZE);
+        const chunkZ = Math.floor(world.z / CHUNK_SIZE);
 
-        const localX = world.x - chunkX * this.chunkSize.x;
-        const localY = world.y - chunkY * this.chunkSize.y;
-        const localZ = world.z - chunkZ * this.chunkSize.z;
+        const localX = world.x - chunkX * CHUNK_SIZE;
+        const localY = world.y - chunkY * CHUNK_SIZE;
+        const localZ = world.z - chunkZ * CHUNK_SIZE;
 
         const block = chunk.getData().getBlockAt(localX, localY, localZ);
         if (block === null || block === undefined) {

@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { ChunkBuilder } from './chunkBuilder';
 import { ChunkData } from './chunkData';
+import { CHUNK_SIZE } from './Config';
 
-const CHUNK_SIZE = new THREE.Vector3(32, 32, 32);
+
 
 type BlockData = {
     blockType: number
@@ -57,7 +58,7 @@ export class Chunk {
     }
 
     buildChunk(negZChunk: Chunk, posZChunk: Chunk, negXChunk: Chunk, posXChunk: Chunk, negYChunk: Chunk, posYChunk: Chunk) {
-        const geometries = this.chunkBuilder.buildGeometryFromChunkData(this.position, this.chunkData, negZChunk.getData().getBlockArray(), posZChunk.getData().getBlockArray(), negXChunk.getData().getBlockArray(), posXChunk.getData().getBlockArray(), negYChunk.getData().getBlockArray(), posYChunk.getData().getBlockArray(), {
+        const geometries = this.chunkBuilder.buildGeometryFromChunkData(this.position, this.chunkData, negZChunk.getData(), posZChunk.getData(), negXChunk.getData(), posXChunk.getData(), negYChunk.getData(), posYChunk.getData(), {
             atlas: {
                 width: this.atlasWidth,
                 height: this.atlasHeight,
@@ -67,7 +68,7 @@ export class Chunk {
 
 
         const mesh = new THREE.Mesh(geometries[0], this.shaderMaterial);
-        mesh.position.copy(this.position.clone().multiply(CHUNK_SIZE));
+        mesh.position.copy(this.position.clone().multiplyScalar(CHUNK_SIZE));
         this.meshObject = mesh;
         mesh.frustumCulled = true;
 

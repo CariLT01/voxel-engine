@@ -1,6 +1,8 @@
 import * as THREE from "three";
-import { ChunkData } from "./chunkData";
-import BlockTypes, { TransparentBlockTypes } from "./BlockTypes";
+import { ChunkData, ChunkPaletteIndex } from "./chunkData";
+import BlockTypes, { BlockTypeIndex, TransparentBlockTypes } from "./BlockTypes";
+import { castToNumber } from "./TypeUtils";
+import { CHUNK_SIZE } from "./Config";
 
 const frontVertices = [
     [0, 0, 1], // 0 bottom-left
@@ -148,57 +150,62 @@ function packVoxelData(
 }
 
 export class ChunkBuilder {
-    private chunkSize: THREE.Vector3;
+    private chunkSize: number = CHUNK_SIZE;
 
-    constructor(chunSize: THREE.Vector3) {
-        this.chunkSize = chunSize;
-    }
 
     private checkVoid(
         chunkData: ChunkData,
-        p: THREE.Vector3,
-        s: THREE.Vector3, // Shift direction (e.g., [1,0,0] for +X)
-        negZdata: Uint8Array,
-        posZdata: Uint8Array,
-        negXdata: Uint8Array,
-        posXdata: Uint8Array,
-        negYdata: Uint8Array,
-        posYdata: Uint8Array,
-        bt: number
+        positionX: number,
+        positionY: number,
+        positionZ: number,
+        shiftX: number,
+        shiftY: number,
+        shiftZ: number,
+        negZdata: ChunkData,
+        posZdata: ChunkData,
+        negXdata: ChunkData,
+        posXdata: ChunkData,
+        negYdata: ChunkData,
+        posYdata: ChunkData,
+        bt: ChunkPaletteIndex
     ) {
-        const pos = p.clone().add(s);
-        let dataArray: Uint8Array = chunkData.getBlockArray();
+        const posX = positionX + shiftX;
+        const posY = positionY + shiftY;
+        const posZ = positionZ + shiftZ;
+
+
+        let dataArray: ChunkData = chunkData;
         if (!dataArray) {
             throw new Error(
                 " { FATAL } Data array is null; Case should never happen"
             );
         }
-        let localX = pos.x,
-            localY = pos.y,
-            localZ = pos.z;
+        let localX = posX,
+            localY = posY,
+            localZ = posZ;
 
         // Only handle the axis we're shifting in (prioritize this neighbor)
-        if (s.x !== 0) {
-            if (pos.x < 0) {
+        if (shiftX !== 0) {
+            if (posX < 0) {
                 dataArray = negXdata;
-                localX = this.chunkSize.x - 1;
-            } else if (pos.x >= this.chunkSize.x) {
+                localX = this.chunkSize - 1;
+            } else if (posX >= this.chunkSize) {
                 dataArray = posXdata;
                 localX = 0;
             }
-        } else if (s.y !== 0) {
-            if (pos.y < 0) {
+        } else if (shiftY !== 0) {
+            if (posY < 0) {
                 dataArray = negYdata;
-                localY = this.chunkSize.y - 1;
-            } else if (pos.y >= this.chunkSize.y) {
+                localY = this.chunkSize - 1;
+            } else if (posY >= this.chunkSize) {
                 dataArray = posYdata;
                 localY = 0;
             }
-        } else if (s.z !== 0) {
-            if (pos.z < 0) {
+        } else if (shiftZ !== 0) {
+            if (posZ < 0) {
                 dataArray = negZdata;
-                localZ = this.chunkSize.z - 1;
-            } else if (pos.z >= this.chunkSize.z) {
+                localZ = this.chunkSize - 1;
+            } else if (posZ >= this.chunkSize) {
                 dataArray = posZdata;
                 localZ = 0;
             }
@@ -212,9 +219,9 @@ export class ChunkBuilder {
         // Calculate index and check block
         const idx =
             localX +
-            localY * this.chunkSize.x +
-            localZ * this.chunkSize.x * this.chunkSize.y;
-        if (idx > this.chunkSize.x * this.chunkSize.y * this.chunkSize.z) {
+            localY * this.chunkSize +
+            localZ * this.chunkSize * this.chunkSize;
+        if (idx > this.chunkSize * this.chunkSize * this.chunkSize) {
             console.error(" { ERROR } Index out of bounds: ", idx);
             return false;
         }
@@ -222,7 +229,11 @@ export class ChunkBuilder {
             console.error(" { ERROR } Index negative: ", idx);
             return false;
         }
-        const block = dataArray[idx];
+        const block: ChunkPaletteIndex = dataArray.getBlockAt(
+            localX,
+            localY,
+            localZ
+        );
         if (block === null || block === undefined) {
             console.error(
                 " { ERROR } Block not found. Case should not be possible. Attempted to get: ",
@@ -234,19 +245,22 @@ export class ChunkBuilder {
         const currentBlockType = chunkData.getPaletteEntryFromPaletteIndex(bt);
         const currentBlockProperties = BlockTypes[currentBlockType.blockType];
         const neighborBlockType =
-            chunkData.getPaletteEntryFromPaletteIndex(block);
+            dataArray.getPaletteEntryFromPaletteIndex(block);
+        
         const neighborBlockProperties = BlockTypes[neighborBlockType.blockType];
 
+
+
         if (currentBlockProperties.Transparent == true) {
-            if (neighborBlockProperties.Transparent == false && block !== 0)
-                return false;
+            if (neighborBlockProperties.Transparent == false)
+                return false; // Current block is transparent, neighbor is opaque
             return currentBlockType.blockType !== neighborBlockType.blockType;
         }
 
-        return block === 0 || neighborBlockProperties.Transparent; // Air or missing block
+        return currentBlockType.blockType === 0 || neighborBlockProperties.Transparent; // Air or missing block
     }
-    private addVertex(v: number[], p: THREE.Vector3) {
-        return [v[0] + p.x, v[1] + p.y, v[2] + p.z];
+    private addVertex(v: number[], px: number, py: number, pz: number) {
+        return [v[0] + px, v[1] + py, v[2] + pz];
     }
 
     private getUVFor(
@@ -308,12 +322,12 @@ export class ChunkBuilder {
     buildGeometryFromChunkData(
         chunkPos: THREE.Vector3,
         chunkData: ChunkData,
-        negZdata: Uint8Array,
-        posZdata: Uint8Array,
-        negXdata: Uint8Array,
-        posXdata: Uint8Array,
-        negYdata: Uint8Array,
-        posYdata: Uint8Array,
+        negZdata: ChunkData,
+        posZdata: ChunkData,
+        negXdata: ChunkData,
+        posXdata: ChunkData,
+        negYdata: ChunkData,
+        posYdata: ChunkData,
         atlasData: ShaderLoaderResultJustWithoutTheMaterial
     ) {
         // Indexing of  x + y * width + z * width * height
@@ -332,14 +346,14 @@ export class ChunkBuilder {
         let vertexCounter = 0;
         let vertexCounterTransparent = 0;
 
-        function pushPacked(packed: number, bt: number) {
+        function pushPacked(packed: number, bt: BlockTypeIndex) {
             if (TransparentBlockTypes.has(bt)) {
                 vertexDataPackedTransparent.push(packed);
             } else {
                 vertexDataPacked.push(packed);
             }
         }
-        function pushIndex(faceTris: number[], bt: number) {
+        function pushIndex(faceTris: number[], bt: BlockTypeIndex) {
             if (TransparentBlockTypes.has(bt)) {
                 for (const tri of faceTris) {
                     indicesTransparent.push(tri + vertexCounterTransparent);
@@ -353,36 +367,41 @@ export class ChunkBuilder {
             }
         }
 
-        for (let x = 0; x < this.chunkSize.x; x++) {
-            for (let y = 0; y < this.chunkSize.y; y++) {
-                for (let z = 0; z < this.chunkSize.z; z++) {
-                    
-                    const blockType = chunkData.getBlockAt(x, y, z);
-                    const paletteData = chunkData.getPaletteEntryFromPaletteIndex(blockType);
+        // Check if the whole array is just air to avoid iterating thruogh the whole thing
+        
 
-                    if (paletteData.blockType == 0) {
+        for (let x = 0; x < this.chunkSize; x++) {
+            for (let y = 0; y < this.chunkSize; y++) {
+                for (let z = 0; z < this.chunkSize; z++) {
+
+                    const localPaletteBlockType = chunkData.getBlockAt(x, y, z);
+                    const paletteData = chunkData.getPaletteEntryFromPaletteIndex(localPaletteBlockType);
+
+                    if (castToNumber(paletteData.blockType) == 0) {
                         continue;
                     }
 
-                    
-                    
+                    const blockType = paletteData.blockType;
+
+
+
                     const blockProperties = BlockTypes[blockType]
                     const textures = blockProperties.Texture;
 
-                    const currentposition = new THREE.Vector3(x, y, z);
+
 
                     if (
                         this.checkVoid(
                             chunkData,
-                            currentposition,
-                            new THREE.Vector3(0, 0, 1),
+                            x, y, z,
+                            0, 0, 1,
                             negZdata,
                             posZdata,
                             negXdata,
                             posXdata,
                             negYdata,
                             posYdata,
-                            blockType
+                            localPaletteBlockType
                         )
                     ) {
                         facesBuilt++;
@@ -391,7 +410,7 @@ export class ChunkBuilder {
                             const vertexLocal = frontVertices[i]; // Local vertex position, e.g., (0,0,0)
                             const vertexWorld = this.addVertex(
                                 vertexLocal,
-                                currentposition
+                                x, y, z
                             ); // World position
 
                             //vertices.push(vertexWorld);
@@ -419,15 +438,15 @@ export class ChunkBuilder {
                     if (
                         this.checkVoid(
                             chunkData,
-                            currentposition,
-                            new THREE.Vector3(0, 0, -1),
+                            x, y, z,
+                            0, 0, -1,
                             negZdata,
                             posZdata,
                             negXdata,
                             posXdata,
                             negYdata,
                             posYdata,
-                            blockType
+                            localPaletteBlockType
                         )
                     ) {
                         facesBuilt++;
@@ -435,7 +454,7 @@ export class ChunkBuilder {
                             const vertexLocal = backVertices[i]; // Local vertex position, e.g., (0,0,0)
                             const vertexWorld = this.addVertex(
                                 vertexLocal,
-                                currentposition
+                                x, y, z
                             ); // World position
 
                             //vertices.push(vertexWorld);
@@ -463,15 +482,15 @@ export class ChunkBuilder {
                     if (
                         this.checkVoid(
                             chunkData,
-                            currentposition,
-                            new THREE.Vector3(0, 1, 0),
+                            x, y, z,
+                            0, 1, 0,
                             negZdata,
                             posZdata,
                             negXdata,
                             posXdata,
                             negYdata,
                             posYdata,
-                            blockType
+                            localPaletteBlockType
                         )
                     ) {
                         facesBuilt++;
@@ -479,7 +498,7 @@ export class ChunkBuilder {
                             const vertexLocal = topVertices[i]; // Local vertex position, e.g., (0,0,0)
                             const vertexWorld = this.addVertex(
                                 vertexLocal,
-                                currentposition
+                                x, y, z
                             ); // World position
 
                             //vertices.push(vertexWorld);
@@ -507,15 +526,15 @@ export class ChunkBuilder {
                     if (
                         this.checkVoid(
                             chunkData,
-                            currentposition,
-                            new THREE.Vector3(0, -1, 0),
+                            x, y, z,
+                            0, -1, 0,
                             negZdata,
                             posZdata,
                             negXdata,
                             posXdata,
                             negYdata,
                             posYdata,
-                            blockType
+                            localPaletteBlockType
                         )
                     ) {
                         facesBuilt++;
@@ -523,7 +542,7 @@ export class ChunkBuilder {
                             const vertexLocal = bottomVertices[i]; // Local vertex position, e.g., (0,0,0)
                             const vertexWorld = this.addVertex(
                                 vertexLocal,
-                                currentposition
+                                x, y, z
                             ); // World position
 
                             //vertices.push(vertexWorld);
@@ -551,15 +570,15 @@ export class ChunkBuilder {
                     if (
                         this.checkVoid(
                             chunkData,
-                            currentposition,
-                            new THREE.Vector3(1, 0, 0),
+                            x, y, z,
+                            1, 0, 0,
                             negZdata,
                             posZdata,
                             negXdata,
                             posXdata,
                             negYdata,
                             posYdata,
-                            blockType
+                            localPaletteBlockType
                         )
                     ) {
                         facesBuilt++;
@@ -567,7 +586,7 @@ export class ChunkBuilder {
                             const vertexLocal = rightVertices[i]; // Local vertex position, e.g., (0,0,0)
                             const vertexWorld = this.addVertex(
                                 vertexLocal,
-                                currentposition
+                                x, y, z
                             ); // World position
 
                             //vertices.push(vertexWorld);
@@ -595,15 +614,15 @@ export class ChunkBuilder {
                     if (
                         this.checkVoid(
                             chunkData,
-                            currentposition,
-                            new THREE.Vector3(-1, 0, 0),
+                            x, y, z,
+                            -1, 0, 0,
                             negZdata,
                             posZdata,
                             negXdata,
                             posXdata,
                             negYdata,
                             posYdata,
-                            blockType
+                            localPaletteBlockType
                         )
                     ) {
                         facesBuilt++;
@@ -611,7 +630,7 @@ export class ChunkBuilder {
                             const vertexLocal = leftVertices[i]; // Local vertex position, e.g., (0,0,0)
                             const vertexWorld = this.addVertex(
                                 vertexLocal,
-                                currentposition
+                                x, y, z
                             ); // World position
 
                             //vertices.push(vertexWorld);
@@ -681,11 +700,11 @@ export class ChunkBuilder {
         // Local-space center
         geometry.boundingSphere = new THREE.Sphere(
             new THREE.Vector3(
-                this.chunkSize.x / 2,
-                this.chunkSize.y / 2,
-                this.chunkSize.z / 2
+                this.chunkSize / 2,
+                this.chunkSize / 2,
+                this.chunkSize / 2
             ),
-            (this.chunkSize.x * Math.sqrt(3)) / 2
+            (this.chunkSize * Math.sqrt(3)) / 2
         );
 
         geometryTransparent.boundingSphere = geometry.boundingSphere;

@@ -1,15 +1,12 @@
 import ChunkVertexShader from '../shaders/chunkVertex.glsl';
 import ChunkFragmentShader from '../shaders/chunkFragment.glsl'
 import { CanvasTexture, ClampToEdgeWrapping, GLSL3, NearestFilter, NearestMipMapNearestFilter, ShaderMaterial, Texture, TextureLoader } from 'three';
-import debugTexturePath from '../../assets/blue.png'
-import debugTexturePath2 from '../../assets/red.png'
-import grassSideTexturePath from '../../assets/grass_side.png'
-import grassTopTexturePath from '../../assets/grass_top.png'
-import grassBottomTexturePath from '../../assets/grass_bottom.png'
-import stoneTexturePath from '../../assets/stone.png'
-import sandTexturePath from '../../assets/sand.png'
-import waterTexturePath from '../../assets/water.png'
-import snowTexturePath from '../../assets/snow.png'
+import { WIREFRAME_MODE } from './Config';
+
+import grassSideTexturePath from "../assets/grass_side.png"
+import grassTopTexturePath from "../assets/grass_top.png"
+import grassBottomTexturePath from "../assets/grass_bottom.png"
+
 
 async function loadImage(src: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
@@ -24,12 +21,6 @@ const textures = [
     grassSideTexturePath,
     grassTopTexturePath,
     grassBottomTexturePath,
-    debugTexturePath,
-    debugTexturePath2,
-    stoneTexturePath,
-    sandTexturePath,
-    waterTexturePath,
-    snowTexturePath
 ];
 
 async function buildAtlas(textures: string[]) {
@@ -111,7 +102,7 @@ export async function createShaderMaterial() {
                 chunkTexture: { value: atlasResult.atlas },
                 atlasHeight: { value: atlasResult.imageY}
             },
-            wireframe: false
+            wireframe: WIREFRAME_MODE
         }
     );
 
@@ -124,7 +115,7 @@ export async function createShaderMaterial() {
                 chunkTexture: { value: atlasResult.atlas },
                 atlasHeight: { value: atlasResult.imageY}
             },
-            wireframe: false,
+            wireframe: WIREFRAME_MODE,
             transparent: true
         }
     );

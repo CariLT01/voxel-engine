@@ -1,13 +1,15 @@
 import { BlockType } from "./BlockDataTypes";
 
+export type BlockTypeIndex = number & { readonly __brand: unique symbol };
+
 
 function computeTransparentBlockSet(bt: BlockType[]) {
-    const transparentBlockSet = new Set<number>();
+    const transparentBlockSet = new Set<BlockTypeIndex>();
 
     let index = 0;
     for (const block of bt) {
         if (block.Transparent == true) {
-            transparentBlockSet.add(index);
+            transparentBlockSet.add(index as BlockTypeIndex);
         }
 
         index++;
@@ -17,24 +19,28 @@ function computeTransparentBlockSet(bt: BlockType[]) {
 }
 
 function computeCollideableBlockSet(bt: BlockType[]) {
-    const collideableBlockSet = new Set<number>();
+    const collideableBlockSet = new Set<BlockTypeIndex>();
 
     let index = 0;
     for (const block of bt) {
         if (block.Collideable == true) {
-            collideableBlockSet.add(index);
+            collideableBlockSet.add(index as BlockTypeIndex);
         }
+        index++;
     }
+
+    console.log(collideableBlockSet);
 
     return collideableBlockSet;
 }
 
 function computeBlockIDsMap(bt: BlockType[]) {
-    const blockIdToIndexMap = new Map<string, number>();
+    console.log(bt)
+    const blockIdToIndexMap = new Map<string, BlockTypeIndex>();
 
     let index = 0;
     for (const block of bt) {
-        blockIdToIndexMap.set(block.Id, index);
+        blockIdToIndexMap.set(block.Id, index as BlockTypeIndex);
         index++;
     }
 
@@ -72,20 +78,6 @@ BlockTypes.push(
         Name: "Grass Block",
         Id: "grass_block",
         Collideable: true
-    },
-    {
-        Texture: {
-            Front: 2,
-            Back: 2,
-            Left: 2,
-            Right: 2,
-            Top: 2,
-            Bottom: 2
-        },
-        Transparent: false,
-        Name: "Stone",
-        Id: "stone",
-        Collideable: true
     }
 )
 
@@ -93,3 +85,13 @@ export default BlockTypes;
 export const TransparentBlockTypes = computeTransparentBlockSet(BlockTypes);
 export const CollideableBlockTypes = computeCollideableBlockSet(BlockTypes);
 export const BlockToIndexMap = computeBlockIDsMap(BlockTypes);
+
+export function getBlockTypeIndexThrows(name: string) {
+    
+    const index = BlockToIndexMap.get(name);
+    if (index == undefined) {
+        throw new Error(`Block type ${name} not found`);
+    }
+
+    return index;
+}

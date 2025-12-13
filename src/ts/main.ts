@@ -1,14 +1,8 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader';
-import { marchingCubesFromGrid } from './marchingCubeGenerator';
-import FastNoiseLite from 'fastnoise-lite';
-import { Chunk } from './chunk';
-import { ChunkBuilder } from './chunkBuilder';
 import { ChunkManager } from './worldChunks';
 import { Player } from './player';
-import {PointerLockControls} from 'three/examples/jsm/controls/PointerLockControls'
 import Stats from 'stats.js';
+import { ClientNetworkingService } from './Networking';
 
 
 const stats1 = new Stats();
@@ -32,179 +26,147 @@ const CHUNK_SIZE = 16;
 
 export class Game {
 
-  renderer: THREE.WebGLRenderer;
-  camera: THREE.PerspectiveCamera;
-  scene: THREE.Scene;
-  chunksManager: ChunkManager;
-  player: Player;
-  clock: THREE.Clock = new THREE.Clock();
-
-  constructor() {
-
-    const canvas = document.querySelector("#main") as HTMLCanvasElement;
-    const context = canvas.getContext('webgl2') as unknown as WebGLRenderingContext; // Shut up Typescript;]
-    
-
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, context: context});
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-
-    canvas.addEventListener('click', () => {
-      canvas.requestPointerLock();
-    });
-
-    this.camera = new THREE.PerspectiveCamera(70);
-    this.scene = new THREE.Scene();
-    this.player = new Player(this.camera, new THREE.Vector3(0, 100, 0));
-    this.chunksManager = new ChunkManager(this.player);
-
-    this.initialize();
-    this.loadControls();
-    this.loadDebugObjects();
-    this.loadLighting();
-    this.loadMarchingCubesChunks();
-    this.loadVoxelChunk();
-    //this.loadSky();
-
-  }
-
-  initialize() {
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 0.5; // reduce brightness, tweak this value
-
-    this.camera.aspect = innerWidth / innerHeight;
-    this.camera.position.set(0, 5, 10);
-    this.camera.updateProjectionMatrix();
-
-    window.addEventListener("resize", () => {
-      this.camera.aspect = innerWidth / innerHeight;
-      this.camera.updateProjectionMatrix();
-      this.renderer.setSize(innerWidth, innerHeight);
-    })
-  }
-  loadControls() {
-    //this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    
-  }
-  loadSky() {
+    renderer: THREE.WebGLRenderer;
+    camera: THREE.PerspectiveCamera;
+    scene: THREE.Scene;
+    chunksManager: ChunkManager;
+    player: Player;
+    clock: THREE.Clock = new THREE.Clock();
 
 
-  }
-  loadDebugObjects() {
-    const planeGeometry = new THREE.PlaneGeometry(20, 20);
 
-    const planeMesh = new THREE.Mesh(planeGeometry, new THREE.MeshPhysicalMaterial({ color: 0xaa0000 }));
-    planeMesh.rotateY(Math.PI / 2);
+    constructor() {
 
-    this.scene.add(planeMesh);
+        const canvas = document.querySelector("#main") as HTMLCanvasElement;
+        const context = canvas.getContext('webgl2') as unknown as WebGLRenderingContext; // Shut up Typescript;]
 
-    const axesHelper = new THREE.AxesHelper(100);
-    this.scene.add(axesHelper);
 
-    const gridHelper = new THREE.GridHelper(32*100, 100);
-    this.scene.add(gridHelper);
-  }
-  loadLighting() {
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(5, 10, 7);
-    this.scene.add(light);
-  }
+        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, context: context });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
 
-  loadVoxelChunk() {
+        canvas.addEventListener('click', () => {
+            canvas.requestPointerLock();
+        });
 
-    /*const chunkData: BlockData[] = [];
-    const chunkBuilder = new ChunkBuilder(new THREE.Vector3(32, 32, 32))
+        this.camera = new THREE.PerspectiveCamera(70);
+        this.scene = new THREE.Scene();
+        this.player = new Player(this.camera, new THREE.Vector3(0, 100, 0));
+        this.chunksManager = new ChunkManager(this.player);
 
-    const noise = new FastNoiseLite(1234);
-    noise.SetNoiseType(FastNoiseLite.NoiseType.Perlin);             // choose Perlin
-    noise.SetFrequency(.05);
+        this.initialize();
+        this.loadControls();
+        this.loadDebugObjects();
+        this.loadLighting();
 
-    for (let x = 0; x < 32; x++) {
-      for (let y = 0; y < 32; y++) {
-        for (let z = 0; z < 32; z++) {
-          const position = new THREE.Vector3(x, y, z);
-          const index = position.x + position.y * 32 + position.z * 32 * 32;
+        ClientNetworkingService.connect("http://localhost:9000", () => {
+            console.log("Connected to server");
+        })
+        //this.loadSky();
 
-          chunkData[index] = {
-            blockType: Math.round((noise.GetNoise(x, y, z) + 1) / 2)
-          }
+    }
+
+    initialize() {
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 0.5; // reduce brightness, tweak this value
+
+        this.camera.aspect = innerWidth / innerHeight;
+        this.camera.position.set(0, 5, 10);
+        this.camera.updateProjectionMatrix();
+
+        window.addEventListener("resize", () => {
+            this.camera.aspect = innerWidth / innerHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(innerWidth, innerHeight);
+        })
+    }
+    loadControls() {
+        //this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+
+    }
+    loadSky() {
+
+
+    }
+
+    private connectServer() {
+        const socket = new WebSocket("ws://localhost:6000/");
+
+        socket.onopen = () => {
+            console.log("Connected to the server");
         }
-      }
-    } 
+    }
 
-    console.log(chunkData);
+    loadDebugObjects() {
+        const planeGeometry = new THREE.PlaneGeometry(20, 20);
 
-    const chunk = new Chunk(chunkData, chunkBuilder);
-    const mesh = chunk.buildChunk();
-    this.scene.add(mesh);*/
-    
-  }
+        const planeMesh = new THREE.Mesh(planeGeometry, new THREE.MeshPhysicalMaterial({ color: 0xaa0000 }));
+        planeMesh.rotateY(Math.PI / 2);
 
-  async loadMarchingCubesChunks() {
-    return
-    /*const noise = new FastNoiseLite(1234);
-    noise.SetNoiseType(FastNoiseLite.NoiseType.Perlin);             // choose Perlin
-    noise.SetFrequency(.05);
+        this.scene.add(planeMesh);
 
-    let i = 0;
-    for (let cx = -3; cx < 3; cx++) {
-      for (let cy = -3; cy < 3; cy++) {
-        for (let cz = -3; cz < 3; cz++) {
-          const grid: number[][][] = [];
-          for (let x = 0; x <= 32; x++) {
-            grid[x] = [];
-            for (let y = 0; y <= 32; y++) {
-              grid[x][y] = [];
-              for (let z = 0; z <= 32; z++) {
-                grid[x][y][z] = (noise.GetNoise(x + cx * 32, y + cy * 32, z + cz * 32) + 1) / 2;
-              }
+        const axesHelper = new THREE.AxesHelper(100);
+        this.scene.add(axesHelper);
+
+        const gridHelper = new THREE.GridHelper(32 * 100, 100);
+        this.scene.add(gridHelper);
+    }
+    loadLighting() {
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 7);
+        this.scene.add(light);
+    }
+
+    render() {
+        stats1.begin();
+        const MAX_DT = 0.05;
+        this.player.updatePlayer(Math.min(MAX_DT, this.clock.getDelta()));
+
+        const pos = this.player.position;
+        const chunkPos = new THREE.Vector3(
+            Math.floor(pos.x / CHUNK_SIZE),
+            Math.floor(pos.y / CHUNK_SIZE),
+            Math.floor(pos.z / CHUNK_SIZE),
+        )
+
+        this.chunksManager.update(chunkPos, this.scene);
+        stats1.end();
+        stats2.begin()
+        this.renderer.render(this.scene, this.camera);
+        stats2.end();
+    }
+
+    private processQueuedPackets() {
+        const queuedPackets = ClientNetworkingService.getQueue();
+
+        console.log("process queue");
+
+        queuedPackets.forEach((entry) => {
+            if (entry.chunkData) {
+                console.log("PRocess packet");
+                this.chunksManager.processChunkDataPacket(entry);
+            } else if (entry.chunkRequest){
+                console.log("got chunk req");
+            } else {
+                console.warn("no pckt found");
             }
-          }
+        });
 
-          const distanceFromCenter = Math.sqrt(
-            cx * cx + cy * cy + cz * cz
-          )
+        ClientNetworkingService.clearQueue();
+    }
 
-          console.log("Progress: ", i, "/", 3 ** 3);
-          const chunk = new Chunk(grid, new THREE.Vector3(cx, cy, cz));
-          this.scene.add(chunk.buildMesh(1));
-          i++;
-        }
-      }
-    }*/
+    tick() {
+        this.processQueuedPackets();
+    }
 
-
-
-
-
-
-  }
-  render() {
-    stats1.begin();
-    const MAX_DT = 0.05;
-    this.player.updatePlayer(Math.min(MAX_DT, this.clock.getDelta()));
-
-    const pos = this.player.position;
-    const chunkPos = new THREE.Vector3(
-      Math.floor(pos.x / CHUNK_SIZE),
-      Math.floor(pos.y / CHUNK_SIZE),
-      Math.floor(pos.z / CHUNK_SIZE),
-    )
-
-    this.chunksManager.update(chunkPos, this.scene);
-    stats1.end();
-    stats2.begin()
-    this.renderer.render(this.scene, this.camera);
-    stats2.end();
-  }
-  
 }
 
 
 const game = new Game();
 
 function tick() {
-  game.render();
-  requestAnimationFrame(tick);
+    game.tick();
+    game.render();
+    requestAnimationFrame(tick);
 }
 
 tick();
